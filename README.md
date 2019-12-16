@@ -30,11 +30,11 @@ compiling a MESA `work` folder.  Use your chosen routine by adding an
 `include` statements after `contains` in your `run_star_extras.f`. e.g.
 to use `hooks/other_wind_grafener.f90`, you would add something like
 
-   ...
-   contains
+    ...
+    contains
    
-   include 'other_wind_grafener.f90'       ! add this line
+    include 'other_wind_grafener.f90'       ! add this line
    
-   subroutine extras_controls(id, ierr)
-      integer, intent(in) :: id
-   ...
+    subroutine extras_controls(id, ierr)
+       integer, intent(in) :: id
+    ...
