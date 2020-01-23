@@ -1,0 +1,2562 @@
+!     ALGORITHM 624 COLLECTED ALGORITHMS FROM ACM.
+!     ALGORITHM APPEARED IN ACM-TRANS. MATH. SOFTWARE, VOL.10, NO. 4,
+!     DEC., 1984, P. 453.
+      SUBROUTINE ADNODE (KK,X,Y, IADJ,IEND, IER)
+      INTEGER KK, IADJ(*), IEND(KK), IER
+      REAL(dp)    X(KK), Y(KK)
+      ! LOGICAL SWPTST
+      ! EXTERNAL INDEX
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE ADDS NODE KK TO A TRIANGULATION OF A SET
+! OF POINTS IN THE PLANE PRODUCING A NEW TRIANGULATION.  A
+! SEQUENCE OF EDGE SWAPS IS THEN APPLIED TO THE MESH,
+! RESULTING IN AN OPTIMAL TRIANGULATION.  ADNODE IS PART
+! OF AN INTERPOLATION PACKAGE WHICH ALSO PROVIDES ROUTINES
+! TO INITIALIZE THE DATA STRUCTURE, PLOT THE MESH, AND
+! DELETE ARCS.
+!
+! INPUT PARAMETERS -   KK - INDEX OF THE NODE TO BE ADDED
+!                           TO THE MESH.  KK .GE. 4.
+!
+!                     X,Y - VECTORS OF COORDINATES OF THE
+!                           NODES IN THE MESH.  (X(I),Y(I))
+!                           DEFINES NODE I FOR I = 1,..,KK.
+!
+!                    IADJ - SET OF ADJACENCY LISTS OF NODES
+!                           1,..,KK-1.
+!
+!                    IEND - POINTERS TO THE ENDS OF
+!                           ADJACENCY LISTS IN IADJ FOR
+!                           EACH NODE IN THE MESH.
+!
+! IADJ AND IEND MAY BE CREATED BY TRMESH.
+!
+! KK, X, AND Y ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - IADJ,IEND - UPDATED WITH THE ADDITION
+!                                 OF NODE KK AS THE LAST
+!                                 ENTRY.
+!
+!                           IER - ERROR INDICATOR
+!                                 IER = 0 IF NO ERRORS
+!                                         WERE ENCOUNTERED.
+!                                 IER = 1 IF ALL NODES
+!                                         (INCLUDING KK) ARE
+!                                         COLLINEAR.
+!
+! MODULES REFERENCED BY ADNODE - TRFIND, INTADD, BDYADD,
+!                                SHIFTD, INDEX, SWPTST,
+!                                SWAP
+!
+!***********************************************************
+!
+      INTEGER K, KM1, I1, I2, I3, INDKF, INDKL, NABOR1, &
+              IO1, IO2, IN1, INDK1, IND2F, IND21
+      REAL(dp)    XK, YK
+!
+! LOCAL PARAMETERS -
+!
+! K =        LOCAL COPY OF KK
+! KM1 =      K - 1
+! I1,I2,I3 = VERTICES OF A TRIANGLE CONTAINING K
+! INDKF =    IADJ INDEX OF THE FIRST NEIGHBOR OF K
+! INDKL =    IADJ INDEX OF THE LAST NEIGHBOR OF K
+! NABOR1 =   FIRST NEIGHBOR OF K BEFORE ANY SWAPS OCCUR
+! IO1,IO2 =  ADJACENT NEIGHBORS OF K DEFINING AN ARC TO
+!              BE TESTED FOR A SWAP
+! IN1 =      VERTEX OPPOSITE K -- FIRST NEIGHBOR OF IO2
+!              WHICH PRECEDES IO1.  IN1,IO1,IO2 ARE IN
+!              COUNTERCLOCKWISE ORDER.
+! INDK1 =    INDEX OF IO1 IN THE ADJACENCY LIST FOR K
+! IND2F =    INDEX OF THE FIRST NEIGHBOR OF IO2
+! IND21 =    INDEX OF IO1 IN THE ADJACENCY LIST FOR IO2
+! XK,YK =    X(K), Y(K)
+!
+      IER = 0
+      K = KK
+!
+! INITIALIZATION
+!
+      KM1 = K - 1
+      XK = X(K)
+      YK = Y(K)
+!
+! ADD NODE K TO THE MESH
+!
+      CALL TRFIND(KM1,XK,YK,X,Y,IADJ,IEND, I1,I2,I3)
+      IF (I1 .EQ. 0) GO TO 5
+      IF (I3 .EQ. 0) CALL BDYADD(K,I1,I2, IADJ,IEND )
+      IF (I3 .NE. 0) CALL INTADD(K,I1,I2,I3, IADJ,IEND )
+!
+! INITIALIZE VARIABLES FOR OPTIMIZATION OF THE MESH
+!
+      INDKF = IEND(KM1) + 1
+      INDKL = IEND(K)
+      NABOR1 = IADJ(INDKF)
+      IO2 = NABOR1
+      INDK1 = INDKF + 1
+      IO1 = IADJ(INDK1)
+!
+! BEGIN LOOP -- FIND THE VERTEX OPPOSITE K
+!
+    1 IND2F = 1
+      IF (IO2 .NE. 1) IND2F = IEND(IO2-1) + 1
+      IND21 = INDEX(IO2,IO1,IADJ,IEND)
+      IF (IND2F .EQ. IND21) GO TO 2
+      IN1 = IADJ(IND21-1)
+      GO TO 3
+!
+! IN1 IS THE LAST NEIGHBOR OF IO2
+!
+    2 IND21 = IEND(IO2)
+      IN1 = IADJ(IND21)
+      IF (IN1 .EQ. 0) GO TO 4
+!
+! SWAP TEST -- IF A SWAP OCCURS, TWO NEW ARCS ARE OPPOSITE K
+!              AND MUST BE TESTED.  INDK1 AND INDKF MUST BE
+!              DECREMENTED.
+!
+    3 IF ( .NOT. SWPTST(IN1,K,IO1,IO2,X,Y) ) GO TO 4
+      CALL SWAP(IN1,K,IO1,IO2, IADJ,IEND )
+      IO1 = IN1
+      INDK1 = INDK1 - 1
+      INDKF = INDKF - 1
+      GO TO 1
+!
+! NO SWAP OCCURRED.  RESET IO2 AND IO1, AND TEST FOR
+!   TERMINATION.
+!
+    4 IF (IO1 .EQ. NABOR1) RETURN
+      IO2 = IO1
+      INDK1 = INDK1 + 1
+      IF (INDK1 .GT. INDKL) INDK1 = INDKF
+      IO1 = IADJ(INDK1)
+      IF (IO1 .NE. 0) GO TO 1
+      RETURN
+!
+! ALL NODES ARE COLLINEAR
+!
+    5 IER = 1
+      RETURN
+      END
+
+      SUBROUTINE BDYADD (KK,I1,I2, IADJ,IEND )
+      INTEGER KK, I1, I2, IADJ(*), IEND(KK)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE ADDS A BOUNDARY NODE TO A TRIANGULATION
+! OF A SET OF KK-1 POINTS IN THE PLANE.  IADJ AND IEND ARE
+! UPDATED WITH THE INSERTION OF NODE KK.
+!
+! INPUT PARAMETERS -   KK - INDEX OF AN EXTERIOR NODE TO BE
+!                           ADDED.  KK .GE. 4.
+!
+!                      I1 - FIRST (RIGHTMOST AS VIEWED FROM
+!                           KK) BOUNDARY NODE IN THE MESH
+!                           WHICH IS VISIBLE FROM KK - THE
+!                           LINE SEGMENT KK-I1 INTERSECTS
+!                           NO ARCS.
+!
+!                      I2 - LAST (LEFTMOST) BOUNDARY NODE
+!                           WHICH IS VISIBLE FROM KK.
+!
+!                    IADJ - SET OF ADJACENCY LISTS OF NODES
+!                           IN THE MESH.
+!
+!                    IEND - POINTERS TO THE ENDS OF
+!                           ADJACENCY LISTS IN IADJ FOR
+!                           EACH NODE IN THE MESH.
+!
+!   IADJ AND IEND MAY BE CREATED BY TRMESH AND MUST CONTAIN
+! THE VERTICES I1 AND I2.  I1 AND I2 MAY BE DETERMINED BY
+! TRFIND.
+!
+! KK, I1, AND I2 ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - IADJ,IEND - UPDATED WITH THE ADDITION
+!                                 OF NODE KK AS THE LAST
+!                                 ENTRY.  NODE KK WILL BE
+!                                 CONNECTED TO I1, I2, AND
+!                                 ALL BOUNDARY NODES BETWEEN
+!                                 THEM.  NO OPTIMIZATION OF
+!                                 THE MESH IS PERFORMED.
+!
+! MODULE REFERENCED BY BDYADD - SHIFTD
+!
+! INTRINSIC FUNCTIONS CALLED BY BDYADD - MIN0, MAX0
+!
+!***********************************************************
+!
+      INTEGER K, KM1, NRIGHT, NLEFT, NF, NL, N1, N2, I, &
+              IMIN, IMAX, KEND, NEXT, INDX
+!
+! LOCAL PARAMETERS -
+!
+! K =            LOCAL COPY OF KK
+! KM1 =          K - 1
+! NRIGHT,NLEFT = LOCAL COPIES OF I1, I2
+! NF,NL =        INDICES OF IADJ BOUNDING THE PORTION OF THE
+!                  ARRAY TO BE SHIFTED
+! N1 =           IADJ INDEX OF THE FIRST NEIGHBOR OF NLEFT
+! N2 =           IADJ INDEX OF THE LAST NEIGHBOR OF NRIGHT
+! I =            DO-LOOP INDEX
+! IMIN,IMAX =    BOUNDS ON DO-LOOP INDEX -- FIRST AND LAST
+!                  ELEMENTS OF IEND TO BE INCREMENTED
+! KEND =         POINTER TO THE LAST NEIGHBOR OF K IN IADJ
+! NEXT =         NEXT BOUNDARY NODE TO BE CONNECTED TO KK
+! INDX =         INDEX FOR IADJ
+!
+      K = KK
+      KM1 = K - 1
+      NRIGHT = I1
+      NLEFT = I2
+!
+! INITIALIZE VARIABLES
+!
+      NL = IEND(KM1)
+      N1 = 1
+      IF (NLEFT .NE. 1) N1 = IEND(NLEFT-1) + 1
+      N2 = IEND(NRIGHT)
+      NF = MAX0(N1,N2)
+!
+! INSERT K AS A NEIGHBOR OF MAX(NRIGHT,NLEFT)
+!
+      CALL SHIFTD(NF,NL,2, IADJ )
+      IADJ(NF+1) = K
+      IMIN = MAX0(NRIGHT,NLEFT)
+      DO 1 I = IMIN,KM1
+        IEND(I) = IEND(I) + 2
+    1   CONTINUE
+!
+! INITIALIZE KEND AND INSERT K AS A NEIGHBOR OF
+!   MIN(NRIGHT,NLEFT)
+!
+      KEND = NL + 3
+      NL = NF - 1
+      NF = MIN0(N1,N2)
+      CALL SHIFTD(NF,NL,1, IADJ )
+      IADJ(NF) = K
+      IMAX = IMIN - 1
+      IMIN = MIN0(NRIGHT,NLEFT)
+      DO 2 I = IMIN,IMAX
+        IEND(I) = IEND(I) + 1
+    2   CONTINUE
+!
+! INSERT NRIGHT AS THE FIRST NEIGHBOR OF K
+!
+      IADJ(KEND) = NRIGHT
+!
+! INITIALIZE INDX FOR LOOP ON BOUNDARY NODES BETWEEN NRIGHT
+!   AND NLEFT
+!
+      INDX = IEND(NRIGHT) - 2
+    3 NEXT = IADJ(INDX)
+      IF (NEXT .EQ. NLEFT) GO TO 4
+!
+! CONNECT NEXT AND K
+!
+      KEND = KEND + 1
+      IADJ(KEND) = NEXT
+      INDX = IEND(NEXT)
+      IADJ(INDX) = K
+      INDX = INDX - 1
+      GO TO 3
+!
+! INSERT NLEFT AND 0 AS THE LAST NEIGHBORS OF K
+!
+    4 IADJ(KEND+1) = NLEFT
+      KEND = KEND + 2
+      IADJ(KEND) = 0
+      IEND(K) = KEND
+      RETURN
+      END
+
+      INTEGER FUNCTION INDEX (NVERTX,NABOR,IADJ,IEND)
+      INTEGER NVERTX, NABOR, IADJ(*), IEND(*)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS FUNCTION RETURNS THE INDEX OF NABOR IN THE
+! ADJACENCY LIST FOR NVERTX.
+!
+! INPUT PARAMETERS - NVERTX - NODE WHOSE ADJACENCY LIST IS
+!                             TO BE SEARCHED.
+!
+!                     NABOR - NODE WHOSE INDEX IS TO BE
+!                             RETURNED.  NABOR MUST BE
+!                             CONNECTED TO NVERTX.
+!
+!                      IADJ - SET OF ADJACENCY LISTS.
+!
+!                      IEND - POINTERS TO THE ENDS OF
+!                             ADJACENCY LISTS IN IADJ.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS FUNCTION.
+!
+! OUTPUT PARAMETER -  INDEX - IADJ(INDEX) = NABOR.
+!
+! MODULES REFERENCED BY INDEX - NONE
+!
+!***********************************************************
+!
+      INTEGER NB, INDX
+!
+! LOCAL PARAMETERS -
+!
+! NB =   LOCAL COPY OF NABOR
+! INDX = INDEX FOR IADJ
+!
+      NB = NABOR
+!
+! INITIALIZATION
+!
+      INDX = IEND(NVERTX) + 1
+!
+! SEARCH THE LIST OF NVERTX NEIGHBORS FOR NB
+!
+    1 INDX = INDX - 1
+      IF (IADJ(INDX) .NE. NB) GO TO 1
+!
+      INDEX = INDX
+      RETURN
+      END
+      SUBROUTINE INTADD (KK,I1,I2,I3, IADJ,IEND )
+      INTEGER KK, I1, I2, I3, IADJ(*), IEND(KK)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE ADDS AN INTERIOR NODE TO A TRIANGULATION
+! OF A SET OF KK-1 POINTS IN THE PLANE.  IADJ AND IEND ARE
+! UPDATED WITH THE INSERTION OF NODE KK IN THE TRIANGLE
+! WHOSE VERTICES ARE I1, I2, AND I3.
+!
+! INPUT PARAMETERS -        KK - INDEX OF NODE TO BE
+!                                INSERTED.  KK .GE. 4.
+!
+!                     I1,I2,I3 - INDICES OF THE VERTICES OF
+!                                A TRIANGLE CONTAINING NODE
+!                                KK -- IN COUNTERCLOCKWISE
+!                                ORDER.
+!
+!                         IADJ - SET OF ADJACENCY LISTS
+!                                OF NODES IN THE MESH.
+!
+!                         IEND - POINTERS TO THE ENDS OF
+!                                ADJACENCY LISTS IN IADJ FOR
+!                                EACH NODE IN THE MESH.
+!
+!   IADJ AND IEND MAY BE CREATED BY TRMESH AND MUST CONTAIN
+! THE VERTICES I1, I2, AND I3.  I1,I2,I3 MAY BE DETERMINED
+! BY TRFIND.
+!
+! KK, I1, I2, AND I3 ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - IADJ,IEND - UPDATED WITH THE ADDITION
+!                                 OF NODE KK AS THE LAST
+!                                 ENTRY.  NODE KK WILL BE
+!                                 CONNECTED TO NODES I1, I2,
+!                                 AND I3.  NO OPTIMIZATION
+!                                 OF THE MESH IS PERFORMED.
+!
+! MODULE REFERENCED BY INTADD - SHIFTD
+!
+! INTRINSIC FUNCTION CALLED BY INTADD - MOD
+!
+!***********************************************************
+!
+      INTEGER K, KM1, N(3), NFT(3), IP1, IP2, IP3, INDX, NF, &
+              NL, N1, N2, IMIN, IMAX, I, ITEMP
+!
+! LOCAL PARAMETERS -
+!
+! K =           LOCAL COPY OF KK
+! KM1 =         K - 1
+! N =           VECTOR CONTAINING I1, I2, I3
+! NFT =         POINTERS TO THE TOPS OF THE 3 SETS OF IADJ
+!                 ELEMENTS TO BE SHIFTED DOWNWARD
+! IP1,IP2,IP3 = PERMUTATION INDICES FOR N AND NFT
+! INDX =        INDEX FOR IADJ AND N
+! NF,NL =       INDICES OF FIRST AND LAST ENTRIES IN IADJ
+!                 TO BE SHIFTED DOWN
+! N1,N2 =       FIRST 2 VERTICES OF A NEW TRIANGLE --
+!                 (N1,N2,KK)
+! IMIN,IMAX =   BOUNDS ON DO-LOOP INDEX -- FIRST AND LAST
+!                 ELEMENTS OF IEND TO BE INCREMENTED
+! I =           DO-LOOP INDEX
+! ITEMP =       TEMPORARY STORAGE LOCATION
+!
+      K = KK
+!
+! INITIALIZATION
+!
+      N(1) = I1
+      N(2) = I2
+      N(3) = I3
+!
+! SET UP NFT
+!
+      DO 2 I = 1,3
+        N1 = N(I)
+        INDX = MOD(I,3) + 1
+        N2 = N(INDX)
+        INDX = IEND(N1) + 1
+!
+! FIND THE INDEX OF N2 AS A NEIGHBOR OF N1
+!
+    1   INDX = INDX - 1
+        IF (IADJ(INDX) .NE. N2) GO TO 1
+        NFT(I) = INDX + 1
+    2   CONTINUE
+!
+! ORDER THE VERTICES BY DECREASING MAGNITUDE.
+!   N(IP(I+1)) PRECEDES N(IP(I)) IN IEND FOR
+!   I = 1,2.
+!
+      IP1 = 1
+      IP2 = 2
+      IP3 = 3
+      IF ( N(2) .LE. N(1) ) GO TO 3
+      IP1 = 2
+      IP2 = 1
+    3 IF ( N(3) .LE. N(IP1) ) GO TO 4
+      IP3 = IP1
+      IP1 = 3
+    4 IF ( N(IP3) .LE. N(IP2) )  GO TO 5
+      ITEMP = IP2
+      IP2 = IP3
+      IP3 = ITEMP
+!
+! ADD NODE K TO THE ADJACENCY LISTS OF EACH VERTEX AND
+!   UPDATE IEND.  FOR EACH VERTEX, A SET OF IADJ ELEMENTS
+!   IS SHIFTED DOWNWARD AND K IS INSERTED.  SHIFTING STARTS
+!   AT THE END OF THE ARRAY.
+!
+    5 KM1 = K - 1
+      NL = IEND(KM1)
+      NF = NFT(IP1)
+      IF (NF .LE. NL) CALL SHIFTD(NF,NL,3, IADJ )
+      IADJ(NF+2) = K
+      IMIN = N(IP1)
+      IMAX = KM1
+      DO 6 I = IMIN,IMAX
+        IEND(I) = IEND(I) + 3
+    6   CONTINUE
+!
+      NL = NF - 1
+      NF = NFT(IP2)
+      CALL SHIFTD(NF,NL,2, IADJ )
+      IADJ(NF+1) = K
+      IMAX = IMIN - 1
+      IMIN = N(IP2)
+      DO 7 I = IMIN,IMAX
+        IEND(I) = IEND(I) + 2
+    7   CONTINUE
+!
+      NL = NF - 1
+      NF = NFT(IP3)
+      CALL SHIFTD(NF,NL,1, IADJ )
+      IADJ(NF) = K
+      IMAX = IMIN - 1
+      IMIN = N(IP3)
+      DO 8 I = IMIN,IMAX
+        IEND(I) = IEND(I) + 1
+    8   CONTINUE
+!
+! ADD NODE K TO IEND AND ITS NEIGHBORS TO IADJ
+!
+      INDX = IEND(KM1)
+      IEND(K) = INDX + 3
+      DO 9 I = 1,3
+        INDX = INDX + 1
+        IADJ(INDX) = N(I)
+    9   CONTINUE
+      RETURN
+      END
+      SUBROUTINE PERMUT (NN,IP, A )
+      INTEGER NN, IP(NN)
+      REAL(dp)    A(NN)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE APPLIES A SET OF PERMUTATIONS TO A VECTOR.
+!
+! INPUT PARAMETERS - NN - LENGTH OF A AND IP.
+!
+!                    IP - VECTOR CONTAINING THE SEQUENCE OF
+!                         INTEGERS 1,...,NN PERMUTED IN THE
+!                         SAME FASHION THAT A IS TO BE PER-
+!                         MUTED.
+!
+!                     A - VECTOR TO BE PERMUTED.
+!
+! NN AND IP ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - A - REORDERED VECTOR REFLECTING THE
+!                         PERMUTATIONS DEFINED BY IP.
+!
+! MODULES REFERENCED BY PERMUT - NONE
+!
+!***********************************************************
+!
+      INTEGER N, K, J, IPJ
+      REAL(dp)    TEMP
+!
+! LOCAL PARAMETERS -
+!
+! N =    LOCAL COPY OF NN
+! K =    INDEX FOR IP AND FOR THE FIRST ELEMENT OF A IN A
+!          PERMUTATION
+! J =    INDEX FOR IP AND A, J .GE. K
+! IPJ =  IP(J)
+! TEMP = TEMPORARY STORAGE FOR A(K)
+!
+      N = NN
+      IF (N .LT. 2) RETURN
+      K = 1
+!
+! LOOP ON PERMUTATIONS
+!
+    1 J = K
+      TEMP = A(K)
+!
+! APPLY PERMUTATION TO A.  IP(J) IS MARKED (MADE NEGATIVE)
+!   AS BEING INCLUDED IN THE PERMUTATION.
+!
+    2 IPJ = IP(J)
+      IP(J) = -IPJ
+      IF (IPJ .EQ. K) GO TO 3
+      A(J) = A(IPJ)
+      J = IPJ
+      GO TO 2
+    3 A(J) = TEMP
+!
+! SEARCH FOR AN UNMARKED ELEMENT OF IP
+!
+    4 K = K + 1
+      IF (K .GT. N) GO TO 5
+      IF (IP(K) .GT. 0) GO TO 1
+      GO TO 4
+!
+! ALL PERMUTATIONS HAVE BEEN APPLIED.  UNMARK IP.
+!
+    5 DO 6 K = 1,N
+        IP(K) = -IP(K)
+    6   CONTINUE
+      RETURN
+      END
+      SUBROUTINE QSORT (N,X, IND)
+      INTEGER N, IND(N)
+      REAL(dp)    X(N)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE USES AN ORDER N*LOG(N) QUICK SORT TO
+! SORT THE REAL(dp) ARRAY X INTO INCREASING ORDER.  THE ALGOR-
+! ITHM IS AS FOLLOWS.  IND IS INITIALIZED TO THE ORDERED
+! SEQUENCE OF INDICES 1,...,N, AND ALL INTERCHANGES ARE
+! APPLIED TO IND.  X IS DIVIDED INTO TWO PORTIONS BY PICKING
+! A CENTRAL ELEMENT T.  THE FIRST AND LAST ELEMENTS ARE COM-
+! PARED WITH T, AND INTERCHANGES ARE APPLIED AS NECESSARY SO
+! THAT THE THREE VALUES ARE IN ASCENDING ORDER.  INTER-
+! CHANGES ARE THEN APPLIED SO THAT ALL ELEMENTS GREATER THAN
+! T ARE IN THE UPPER PORTION OF THE ARRAY AND ALL ELEMENTS
+! LESS THAN T ARE IN THE LOWER PORTION.  THE UPPER AND LOWER
+! INDICES OF ONE OF THE PORTIONS ARE SAVED IN LOCAL ARRAYS,
+! AND THE PROCESS IS REPEATED ITERATIVELY ON THE OTHER
+! PORTION.  WHEN A PORTION IS COMPLETELY SORTED, THE PROCESS
+! BEGINS AGAIN BY RETRIEVING THE INDICES BOUNDING ANOTHER
+! UNSORTED PORTION.
+!
+! INPUT PARAMETERS -   N - LENGTH OF THE ARRAY X.
+!
+!                      X - VECTOR OF LENGTH N TO BE SORTED.
+!
+!                    IND - VECTOR OF LENGTH .GE. N.
+!
+! N AND X ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETER - IND - SEQUENCE OF INDICES 1,...,N
+!                          PERMUTED IN THE SAME FASHION AS X
+!                          WOULD BE.  THUS, THE ORDERING ON
+!                          X IS DEFINED BY Y(I) = X(IND(I)).
+!
+! MODULES REFERENCED BY QSORT - NONE
+!
+! INTRINSIC FUNCTIONS CALLED BY QSORT - IFIX, FLOAT
+!
+!***********************************************************
+!
+! NOTE -- IU AND IL MUST BE DIMENSIONED .GE. LOG(N) WHERE
+!         LOG HAS BASE 2.
+!
+!***********************************************************
+!
+      INTEGER IU(21), IL(21)
+      INTEGER M, I, J, K, L, IJ, IT, ITT, INDX
+      REAL(dp)    R, T
+!
+! LOCAL PARAMETERS -
+!
+! IU,IL =  TEMPORARY STORAGE FOR THE UPPER AND LOWER
+!            INDICES OF PORTIONS OF THE ARRAY X
+! M =      INDEX FOR IU AND IL
+! I,J =    LOWER AND UPPER INDICES OF A PORTION OF X
+! K,L =    INDICES IN THE RANGE I,...,J
+! IJ =     RANDOMLY CHOSEN INDEX BETWEEN I AND J
+! IT,ITT = TEMPORARY STORAGE FOR INTERCHANGES IN IND
+! INDX =   TEMPORARY INDEX FOR X
+! R =      PSEUDO RANDOM NUMBER FOR GENERATING IJ
+! T =      CENTRAL ELEMENT OF X
+!
+      IF (N .LE. 0) RETURN
+!
+! INITIALIZE IND, M, I, J, AND R
+!
+      DO 1 I = 1,N
+        IND(I) = I
+    1   CONTINUE
+      M = 1
+      I = 1
+      J = N
+      R = 0.375d0
+!
+! TOP OF LOOP
+!
+    2 IF (I .GE. J) GO TO 10
+      IF (R .GT. 0.5898437d0) GO TO 3
+      R = R + 0.0390625d0
+      GO TO 4
+    3 R = R - 0.21875d0
+!
+! INITIALIZE K
+!
+    4 K = I
+!
+! SELECT A CENTRAL ELEMENT OF X AND SAVE IT IN T
+!
+      ! IJ = I + IFIX(R*FLOAT(J-I)) 
+      IJ = I + INT(R*FLOAT(J-I))
+     IT = IND(IJ)
+      T = X(IT)
+!
+! IF THE FIRST ELEMENT OF THE ARRAY IS GREATER THAN T,
+!   INTERCHANGE IT WITH T
+!
+      INDX = IND(I)
+      IF (X(INDX) .LE. T) GO TO 5
+      IND(IJ) = INDX
+      IND(I) = IT
+      IT = INDX
+      T = X(IT)
+!
+! INITIALIZE L
+!
+    5 L = J
+!
+! IF THE LAST ELEMENT OF THE ARRAY IS LESS THAN T,
+!   INTERCHANGE IT WITH T
+!
+      INDX = IND(J)
+      IF (X(INDX) .GE. T) GO TO 7
+      IND(IJ) = INDX
+      IND(J) = IT
+      IT = INDX
+      T = X(IT)
+!
+! IF THE FIRST ELEMENT OF THE ARRAY IS GREATER THAN T,
+!   INTERCHANGE IT WITH T
+!
+      INDX = IND(I)
+      IF (X(INDX) .LE. T) GO TO 7
+      IND(IJ) = INDX
+      IND(I) = IT
+      IT = INDX
+      T = X(IT)
+      GO TO 7
+!
+! INTERCHANGE ELEMENTS K AND L
+!
+    6 ITT = IND(L)
+      IND(L) = IND(K)
+      IND(K) = ITT
+!
+! FIND AN ELEMENT IN THE UPPER PART OF THE ARRAY WHICH IS
+!   NOT LARGER THAN T
+!
+    7 L = L - 1
+      INDX = IND(L)
+      IF (X(INDX) .GT. T) GO TO 7
+!
+! FIND AN ELEMENT IN THE LOWER PART OF THE ARRAY WHCIH IS
+!   NOT SMALLER THAN T
+!
+    8 K = K + 1
+      INDX = IND(K)
+      IF (X(INDX) .LT. T) GO TO 8
+!
+! IF K .LE. L, INTERCHANGE ELEMENTS K AND L
+!
+      IF (K .LE. L) GO TO 6
+!
+! SAVE THE UPPER AND LOWER SUBSCRIPTS OF THE PORTION OF THE
+!   ARRAY YET TO BE SORTED
+!
+      IF (L-I .LE. J-K) GO TO 9
+      IL(M) = I
+      IU(M) = L
+      I = K
+      M = M + 1
+      GO TO 11
+!
+    9 IL(M) = K
+      IU(M) = J
+      J = L
+      M = M + 1
+      GO TO 11
+!
+! BEGIN AGAIN ON ANOTHER UNSORTED PORTION OF THE ARRAY
+!
+   10 M = M - 1
+      IF (M .EQ. 0) RETURN
+      I = IL(M)
+      J = IU(M)
+!
+   11 IF (J-I .GE. 11) GO TO 4
+      IF (I .EQ. 1) GO TO 2
+      I = I - 1
+!
+! SORT ELEMENTS I+1,...,J.  NOTE THAT 1 .LE. I .LT. J AND
+!   J-I .LT. 11.
+!
+   12 I = I + 1
+      IF (I .EQ. J) GO TO 10
+      INDX = IND(I+1)
+      T = X(INDX)
+      IT = INDX
+      INDX = IND(I)
+      IF (X(INDX) .LE. T) GO TO 12
+      K = I
+!
+   13 IND(K+1) = IND(K)
+      K = K - 1
+      INDX = IND(K)
+      IF (T .LT. X(INDX)) GO TO 13
+      IND(K+1) = IT
+      GO TO 12
+      END
+
+      SUBROUTINE REORDR(N, IFLAG, A, B, C, IND)
+      INTEGER N, IFLAG, IND(N)
+      REAL(dp) A(N), B(N), C(N)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE USES AN ORDER N*LOG(N) QUICK SORT TO
+! REORDER THE REAL(dp) ARRAY A INTO INCREASING ORDER.  A RECORD
+! OF THE PERMUTATIONS APPLIED TO A IS STORED IN IND, AND
+! THESE PERMUTATIONS MAY BE APPLIED TO ONE OR TWO ADDITIONAL
+! VECTORS BY THIS ROUTINE.  ANY OTHER VECTOR V MAY BE PER-
+! MUTED IN THE SAME FASHION BY CALLING SUBROUTINE PERMUT
+! WITH N, IND, AND V AS PARAMETERS.
+!   A SET OF NODES (X(I),Y(I)) AND DATA VALUES Z(I) MAY BE
+! PREPROCESSED BY REORDR FOR INCREASED EFFICIENCY IN THE
+! TRIANGULATION ROUTINE TRMESH.  EFFICIENCY IS INCREASED BY
+! A FACTOR OF APPROXIMATELY SQRT(N)/6 FOR RANDOMLY DISTRIB-
+! UTED NODES, AND THE PREPROCESSING IS ALSO USEFUL FOR
+! DETECTING DUPLICATE NODES.  EITHER X OR Y MAY BE USED AS
+! THE SORT KEY (ASSOCIATED WITH A).
+!
+! INPUT PARAMETERS - N - NUMBER OF NODES.
+!
+!                IFLAG - NUMBER OF VECTORS TO BE PERMUTED.
+!                        IFLAG .LE. 0 IF A, B, AND C ARE TO
+!                                     REMAIN UNALTERED.
+!                        IFLAG .EQ. 1 IF ONLY A IS TO BE
+!                                     PERMUTED.
+!                        IFLAG .EQ. 2 IF A AND B ARE TO BE
+!                                     PERMUTED.
+!                        IFLAG .GE. 3 IF A, B, AND C ARE TO
+!                                     BE PERMUTED.
+!
+!                A,B,C - VECTORS OF LENGTH N TO BE SORTED
+!                        (ON THE COMPONENTS OF A), OR DUMMY
+!                        PARAMETERS, DEPENDING ON IFLAG.
+!
+!                  IND - VECTOR OF LENGTH .GE. N.
+!
+! N, IFLAG, AND ANY DUMMY PARAMETERS ARE NOT ALTERED BY THIS
+!   ROUTINE.
+!
+! OUTPUT PARAMETERS - A,B,C - SORTED OR UNALTERED VECTORS.
+!
+!                       IND - SEQUENCE OF INDICES 1,...,N
+!                             PERMUTED IN THE SAME FASHION
+!                             AS THE REAL(dp) VECTORS.  THUS,
+!                             THE ORDERING MAY BE APPLIED TO
+!                             A REAL(dp) VECTOR V AND STORED IN
+!                             W BY SETTING W(I) = V(IND(I)),
+!                             OR V MAY BE OVERWRITTEN WITH
+!                             THE ORDERING BY A CALL TO PER-
+!                             MUT.
+!
+! MODULES REFERENCED BY REORDR - QSORT, PERMUT
+!
+!***********************************************************
+!
+      INTEGER NN, NV
+!
+! LOCAL PARAMETERS -
+!
+! NN = LOCAL COPY OF N
+! NV = LOCAL COPY OF IFLAG
+!
+      NN = N
+      NV = IFLAG
+      CALL QSORT(NN, A, IND)
+      IF (NV .LE. 0) RETURN
+      CALL PERMUT(NN, IND, A )
+      IF (NV .EQ. 1) RETURN
+      CALL PERMUT(NN, IND, B )
+      IF (NV .EQ. 2) RETURN
+      CALL PERMUT(NN, IND, C )
+      RETURN
+      END
+
+      SUBROUTINE SHIFTD (NFRST, NLAST, KK, IARR )
+      INTEGER NFRST, NLAST, KK, IARR(*)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE SHIFTS A SET OF CONTIGUOUS ELEMENTS OF AN
+! INTEGER ARRAY KK POSITIONS DOWNWARD (UPWARD IF KK .LT. 0).
+! THE LOOPS ARE UNROLLED IN ORDER TO INCREASE EFFICIENCY.
+!
+! INPUT PARAMETERS - NFRST,NLAST - BOUNDS ON THE PORTION OF
+!                                  IARR TO BE SHIFTED.  ALL
+!                                  ELEMENTS BETWEEN AND
+!                                  INCLUDING THE BOUNDS ARE
+!                                  SHIFTED UNLESS NFRST .GT.
+!                                  NLAST, IN WHICH CASE NO
+!                                  SHIFT OCCURS.
+!
+!                             KK - NUMBER OF POSITIONS EACH
+!                                  ELEMENT IS TO BE SHIFTED.
+!                                  IF KK .LT. 0 SHIFT UP.
+!                                  IF KK .GT. 0 SHIFT DOWN.
+!
+!                           IARR - INTEGER ARRAY OF LENGTH
+!                                  .GE. NLAST + MAX(KK,0).
+!
+! NFRST, NLAST, AND KK ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETER -        IARR - SHIFTED ARRAY.
+!
+! MODULES REFERENCED BY SHIFTD - NONE
+!
+!***********************************************************
+!
+      INTEGER INC, K, NF, NL, NLP1, NS, NSL, I, IBAK, INDX, &
+              IMAX
+      DATA    INC/5/
+!
+! LOCAL PARAMETERS -
+!
+! INC =  DO-LOOP INCREMENT (UNROLLING FACTOR) -- IF INC IS
+!          CHANGED, STATEMENTS MUST BE ADDED TO OR DELETED
+!          FROM THE DO-LOOPS
+! K =    LOCAL COPY OF KK
+! NF =   LOCAL COPY OF NFRST
+! NL =   LOCAL COPY OF NLAST
+! NLP1 = NL + 1
+! NS =   NUMBER OF SHIFTS
+! NSL =  NUMBER OF SHIFTS DONE IN UNROLLED DO-LOOP (MULTIPLE
+!          OF INC)
+! I =    DO-LOOP INDEX AND INDEX FOR IARR
+! IBAK = INDEX FOR DOWNWARD SHIFT OF IARR
+! INDX = INDEX FOR IARR
+! IMAX = BOUND ON DO-LOOP INDEX
+!
+      K = KK
+      NF = NFRST
+      NL = NLAST
+      IF (NF .GT. NL  .OR.  K .EQ. 0) RETURN
+      NLP1 = NL + 1
+      NS = NLP1 - NF
+      NSL = INC*(NS/INC)
+      IF ( K .LT. 0) GO TO 4
+!
+! SHIFT DOWNWARD STARTING FROM THE BOTTOM
+!
+      IF (NSL .LE. 0) GO TO 2
+      DO 1 I = 1,NSL,INC
+        IBAK = NLP1 - I
+        INDX = IBAK + K
+        IARR(INDX) = IARR(IBAK)
+        IARR(INDX-1) = IARR(IBAK-1)
+        IARR(INDX-2) = IARR(IBAK-2)
+        IARR(INDX-3) = IARR(IBAK-3)
+        IARR(INDX-4) = IARR(IBAK-4)
+    1   CONTINUE
+!
+! PERFORM THE REMAINING NS-NSL SHIFTS ONE AT A TIME
+!
+    2 IBAK = NLP1 - NSL
+    3 IF (IBAK .LE. NF) RETURN
+      IBAK = IBAK - 1
+      INDX = IBAK + K
+      IARR(INDX) = IARR(IBAK)
+      GO TO 3
+!
+! SHIFT UPWARD STARTING FROM THE TOP
+!
+    4 IF (NSL .LE. 0) GO TO 6
+      IMAX = NLP1 - INC
+      DO 5 I = NF,IMAX,INC
+        INDX = I + K
+        IARR(INDX) = IARR(I)
+        IARR(INDX+1) = IARR(I+1)
+        IARR(INDX+2) = IARR(I+2)
+        IARR(INDX+3) = IARR(I+3)
+        IARR(INDX+4) = IARR(I+4)
+    5   CONTINUE
+!
+! PERFORM THE REMAINING NS-NSL SHIFTS ONE AT A TIME
+!
+    6 I = NSL + NF
+    7 IF (I .GT. NL) RETURN
+      INDX = I + K
+      IARR(INDX) = IARR(I)
+      I = I + 1
+      GO TO 7
+      END
+      SUBROUTINE SWAP (NIN1,NIN2,NOUT1,NOUT2, IADJ,IEND )
+      INTEGER NIN1, NIN2, NOUT1, NOUT2, IADJ(*), IEND(*)
+      ! EXTERNAL INDEX
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE SWAPS THE DIAGONALS IN A CONVEX QUADRI-
+! LATERAL.
+!
+! INPUT PARAMETERS -  NIN1,NIN2,NOUT1,NOUT2 - NODAL INDICES
+!                            OF A PAIR OF ADJACENT TRIANGLES
+!                            WHICH FORM A CONVEX QUADRILAT-
+!                            ERAL.  NOUT1 AND NOUT2 ARE CON-
+!                            NECTED BY AN ARC WHICH IS TO BE
+!                            REPLACED BY THE ARC NIN1-NIN2.
+!                            (NIN1,NOUT1,NOUT2) MUST BE TRI-
+!                            ANGLE VERTICES IN COUNTERCLOCK-
+!                            WISE ORDER.
+!
+! THE ABOVE PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+!                IADJ,IEND - TRIANGULATION DATA STRUCTURE
+!                            (SEE SUBROUTINE TRMESH).
+!
+! OUTPUT PARAMETERS - IADJ,IEND - UPDATED WITH THE ARC
+!                                 REPLACEMENT.
+!
+! MODULES REFERENCED BY SWAP - INDEX, SHIFTD
+!
+!***********************************************************
+!
+      INTEGER IN(2), IO(2), IP1, IP2, J, K, NF, NL, I, &
+              IMIN, IMAX
+!
+! LOCAL PARAMETERS -
+!
+! IN =        NIN1 AND NIN2 ORDERED BY INCREASING MAGNITUDE
+!               (THE NEIGHBORS OF IN(1) PRECEDE THOSE OF
+!               IN(2) IN IADJ)
+! IO =        NOUT1 AND NOUT2 IN INCREASING ORDER
+! IP1,IP2 =   PERMUTATION OF (1,2) SUCH THAT IO(IP1)
+!               PRECEDES IO(IP2) AS A NEIGHBOR OF IN(1)
+! J,K =       PERMUTATION OF (1,2) USED AS INDICES OF IN
+!               AND IO
+! NF,NL =     IADJ INDICES BOUNDARY A PORTION OF THE ARRAY
+!               TO BE SHIFTED
+! I =         IEND INDEX
+! IMIN,IMAX = BOUNDS ON THE PORTION OF IEND TO BE INCRE-
+!               MENTED OR DECREMENTED
+!
+      IN(1) = NIN1
+      IN(2) = NIN2
+      IO(1) = NOUT1
+      IO(2) = NOUT2
+      IP1 = 1
+!
+! ORDER THE INDICES SO THAT IN(1) .LT. IN(2) AND IO(1) .LT.
+!   IO(2), AND CHOOSE IP1 AND IP2 SUCH THAT (IN(1),IO(IP1),
+!   IO(IP2)) FORMS A TRIANGLE.
+!
+      IF (IN(1) .LT. IN(2)) GO TO 1
+      IN(1) = IN(2)
+      IN(2) = NIN1
+      IP1 = 2
+    1 IF (IO(1) .LT. IO(2)) GO TO 2
+      IO(1) = IO(2)
+      IO(2) = NOUT1
+      IP1 = 3 - IP1
+    2 IP2 = 3 - IP1
+      IF (IO(2) .LT. IN(1)) GO TO 8
+      IF (IN(2) .LT. IO(1)) GO TO 12
+!
+! IN(1) AND IO(1) PRECEDE IN(2) AND IO(2).  FOR (J,K) =
+!   (1,2) AND (2,1), DELETE IO(K) AS A NEIGHBOR OF IO(J)
+!   BY SHIFTING A PORTION OF IADJ EITHER UP OR DOWN AND
+!   AND INSERT IN(K) AS A NEIGHBOR OF IN(J).
+!
+      DO 7 J = 1,2
+        K = 3 - J
+        IF (IN(J) .GT. IO(J)) GO TO 4
+!
+!   THE NEIGHBORS OF IN(J) PRECEDE THOSE OF IO(J) -- SHIFT
+!     DOWN BY 1
+!
+        NF = 1 + INDEX(IN(J),IO(IP1),IADJ,IEND)
+        NL = -1 + INDEX(IO(J),IO(K),IADJ,IEND)
+        IF (NF .LE. NL) CALL SHIFTD(NF,NL,1, IADJ )
+        IADJ(NF) = IN(K)
+        IMIN = IN(J)
+        IMAX = IO(J)-1
+        DO I = IMIN,IMAX
+           IEND(I) = IEND(I) + 1
+        enddo
+        GO TO 6
+!
+!   THE NEIGHBORS OF IO(J) PRECEDE THOSE OF IN(J) -- SHIFT
+!     UP BY 1
+!
+    4   NF = 1 + INDEX(IO(J),IO(K),IADJ,IEND)
+        NL = -1 + INDEX(IN(J),IO(IP2),IADJ,IEND)
+        IF (NF .LE. NL) CALL SHIFTD(NF,NL,-1, IADJ )
+        IADJ(NL) = IN(K)
+        IMIN = IO(J)
+        IMAX = IN(J) - 1
+        DO I = IMIN,IMAX
+           IEND(I) = IEND(I) - 1
+        ENDDO
+!
+!   REVERSE (IP1,IP2) FOR (J,K) = (2,1)
+!
+    6   IP1 = IP2
+        IP2 = 3 - IP1
+    7   CONTINUE
+      RETURN
+!
+! THE VERTICES ARE ORDERED (IO(1),IO(2),IN(1),IN(2)).
+!   DELETE IO(2) BY SHIFTING UP BY 1
+!
+    8 NF = 1 + INDEX(IO(1),IO(2),IADJ,IEND)
+      NL = -1 + INDEX(IO(2),IO(1),IADJ,IEND)
+      IF (NF .LE. NL) CALL SHIFTD(NF,NL,-1, IADJ )
+      IMIN = IO(1)
+      IMAX = IO(2)-1
+      DO I = IMIN,IMAX
+         IEND(I) = IEND(I) - 1
+      enddo
+!
+!   DELETE IO(1) BY SHIFTING UP BY 2 AND INSERT IN(2)
+!
+      NF = NL + 2
+      NL = -1 + INDEX(IN(1),IO(IP2),IADJ,IEND)
+      IF (NF .LE. NL) CALL SHIFTD(NF,NL,-2, IADJ )
+      IADJ(NL-1) = IN(2)
+      IMIN = IO(2)
+      IMAX = IN(1)-1
+      DO I = IMIN,IMAX
+         IEND(I) = IEND(I) - 2
+      enddo
+!
+!   SHIFT UP BY 1 AND INSERT IN(1)
+!
+      NF = NL + 1
+      NL = -1 + INDEX(IN(2),IO(IP1),IADJ,IEND)
+      CALL SHIFTD(NF,NL,-1, IADJ )
+      IADJ(NL) = IN(1)
+      IMIN = IN(1)
+      IMAX = IN(2)-1
+      DO I = IMIN,IMAX
+        IEND(I) = IEND(I) - 1
+      enddo
+      RETURN
+!
+! THE VERTICES ARE ORDERED (IN(1),IN(2),IO(1),IO(2)).
+!   DELETE IO(1) BY SHIFTING DOWN BY 1
+!
+   12 NF = 1 + INDEX(IO(1),IO(2),IADJ,IEND)
+      NL = -1 + INDEX(IO(2),IO(1),IADJ,IEND)
+      IF (NF .LE. NL) CALL SHIFTD(NF,NL,1, IADJ )
+      IMIN = IO(1)
+      IMAX = IO(2) - 1
+      DO I = IMIN,IMAX
+         IEND(I) = IEND(I) + 1
+      enddo
+!
+!   DELETE IO(2) BY SHIFTING DOWN BY 2 AND INSERT IN(1)
+!
+      NL = NF - 2
+      NF = 1 + INDEX(IN(2),IO(IP2),IADJ,IEND)
+      IF (NF .LE. NL) CALL SHIFTD(NF,NL,2, IADJ )
+      IADJ(NF+1) = IN(1)
+      IMIN = IN(2)
+      IMAX = IO(1) - 1
+      DO I = IMIN,IMAX
+         IEND(I) = IEND(I) + 2
+      ENDDO
+!
+!   SHIFT DOWN BY 1 AND INSERT IN(2)
+!
+      NL = NF - 1
+      NF = 1 + INDEX(IN(1),IO(IP1),IADJ,IEND)
+      CALL SHIFTD(NF,NL,1, IADJ )
+      IADJ(NF) = IN(2)
+      IMIN = IN(1)
+      IMAX = IN(2) - 1
+      DO I = IMIN,IMAX
+         IEND(I) = IEND(I) + 1
+      ENDDO
+      RETURN
+      END
+
+      ! to avoid confusion with logical variable SWPTST
+      LOGICAL FUNCTION SWPTST (IN1,IN2,IO1,IO2,X,Y)
+      INTEGER IN1, IN2, IO1, IO2
+      REAL(dp)    X(*), Y(*)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS FUNCTION DECIDES WHETHER OR NOT TO REPLACE A
+! DIAGONAL ARC IN A QUADRILATERAL WITH THE OTHER DIAGONAL.
+! THE DETERMINATION IS BASED ON THE SIZES OF THE ANGLES
+! CONTAINED IN THE 2 TRIANGLES DEFINED BY THE DIAGONAL.
+! THE DIAGONAL IS CHOSEN TO MAXIMIZE THE SMALLEST OF THE
+! SIX ANGLES OVER THE TWO PAIRS OF TRIANGLES.
+!
+! INPUT PARAMETERS -  IN1,IN2,IO1,IO2 - NODE INDICES OF THE
+!                              FOUR POINTS DEFINING THE
+!                              QUADRILATERAL.  IO1 AND IO2
+!                              ARE CURRENTLY CONNECTED BY A
+!                              DIAGONAL ARC.  THIS ARC
+!                              SHOULD BE REPLACED BY AN ARC
+!                              CONNECTING IN1, IN2 IF THE
+!                              DECISION IS MADE TO SWAP.
+!                              IN1,IO1,IO2 MUST BE IN
+!                              COUNTERCLOCKWISE ORDER.
+!
+!                        X,Y - VECTORS OF NODAL COORDINATES.
+!                              (X(I),Y(I)) ARE THE COORD-
+!                              INATES OF NODE I FOR I = IN1,
+!                              IN2, IO1, OR IO2.
+!
+! NONE OF THE INPUT PARAMETERS ARE ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETER -  SWPTST - .TRUE. IFF THE ARC CONNECTING
+!                              IO1 AND IO2 IS TO BE REPLACED
+!
+! MODULES REFERENCED BY SWPTST - NONE
+!
+!***********************************************************
+!
+      REAL(dp) DX11, DX12, DX22, DX21, DY11, DY12, DY22, DY21, &
+           SIN1, SIN2, COS1, COS2, SIN12
+!
+! LOCAL PARAMETERS -
+!
+! DX11,DY11 = X,Y COORDINATES OF THE VECTOR IN1-IO1
+! DX12,DY12 = X,Y COORDINATES OF THE VECTOR IN1-IO2
+! DX22,DY22 = X,Y COORDINATES OF THE VECTOR IN2-IO2
+! DX21,DY21 = X,Y COORDINATES OF THE VECTOR IN2-IO1
+! SIN1 =      CROSS PRODUCT OF THE VECTORS IN1-IO1 AND
+!               IN1-IO2 -- PROPORTIONAL TO SIN(T1) WHERE T1
+!               IS THE ANGLE AT IN1 FORMED BY THE VECTORS
+! COS1 =      INNER PRODUCT OF THE VECTORS IN1-IO1 AND
+!               IN1-IO2 -- PROPORTIONAL TO COS(T1)
+! SIN2 =      CROSS PRODUCT OF THE VECTORS IN2-IO2 AND
+!               IN2-IO1 -- PROPORTIONAL TO SIN(T2) WHERE T2
+!               IS THE ANGLE AT IN2 FORMED BY THE VECTORS
+! COS2 =      INNER PRODUCT OF THE VECTORS IN2-IO2 AND
+!               IN2-IO1 -- PROPORTIONAL TO COS(T2)
+! SIN12 =     SIN1*COS2 + COS1*SIN2 -- PROPORTIONAL TO
+!               SIN(T1+T2)
+!
+      SWPTST = .FALSE.
+!
+! COMPUTE THE VECTORS CONTAINING THE ANGLES T1, T2
+!
+      DX11 = X(IO1) - X(IN1)
+      DX12 = X(IO2) - X(IN1)
+      DX22 = X(IO2) - X(IN2)
+      DX21 = X(IO1) - X(IN2)
+!
+      DY11 = Y(IO1) - Y(IN1)
+      DY12 = Y(IO2) - Y(IN1)
+      DY22 = Y(IO2) - Y(IN2)
+      DY21 = Y(IO1) - Y(IN2)
+!
+! COMPUTE INNER PRODUCTS
+!
+      COS1 = DX11*DX12 + DY11*DY12
+      COS2 = DX22*DX21 + DY22*DY21
+!
+! THE DIAGONALS SHOULD BE SWAPPED IFF (T1+T2) .GT. 180
+!   DEGREES.  THE FOLLOWING TWO TESTS INSURE NUMERICAL
+!   STABILITY.
+!
+      IF (COS1 .GE. 0.  .AND.  COS2 .GE. 0.) RETURN
+      IF (COS1 .LT. 0.  .AND.  COS2 .LT. 0.) GO TO 1
+!
+! COMPUTE VECTOR CROSS PRODUCTS
+!
+      SIN1 = DX11*DY12 - DX12*DY11
+      SIN2 = DX22*DY21 - DX21*DY22
+      SIN12 = SIN1*COS2 + COS1*SIN2
+      IF (SIN12 .GE. 0.) RETURN
+    1 SWPTST = .TRUE.
+      RETURN
+      END
+      SUBROUTINE TRFIND (NST,PX,PY,X,Y,IADJ,IEND, I1,I2,I3)
+      INTEGER NST, IADJ(*), IEND(*), I1, I2, I3
+      REAL(dp)    PX, PY, X(*), Y(*)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE LOCATES A POINT P IN A THIESSEN TRIANGU-
+! LATION, RETURNING THE VERTEX INDICES OF A TRIANGLE WHICH
+! CONTAINS P.  TRFIND IS PART OF AN INTERPOLATION PACKAGE
+! WHICH PROVIDES SUBROUTINES FOR CREATING THE MESH.
+!
+! INPUT PARAMETERS -    NST - INDEX OF NODE AT WHICH TRFIND
+!                             BEGINS SEARCH.  SEARCH TIME
+!                             DEPENDS ON THE PROXIMITY OF
+!                             NST TO P.
+!
+!                     PX,PY - X AND Y-COORDINATES OF THE
+!                             POINT TO BE LOCATED.
+!
+!                       X,Y - VECTORS OF COORDINATES OF
+!                             NODES IN THE MESH.  (X(I),Y(I))
+!                             DEFINES NODE I FOR I = 1,...,N
+!                             WHERE N .GE. 3.
+!
+!                      IADJ - SET OF ADJACENCY LISTS OF
+!                             NODES IN THE MESH.
+!
+!                      IEND - POINTERS TO THE ENDS OF
+!                             ADJACENCY LISTS IN IADJ FOR
+!                             EACH NODE IN THE MESH.
+!
+! IADJ AND IEND MAY BE CREATED BY TRMESH.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - I1,I2,I3 - VERTEX INDICES IN COUNTER-
+!                                CLOCKWISE ORDER - VERTICES
+!                                OF A TRIANGLE CONTAINING P
+!                                IF P IS AN INTERIOR NODE.
+!                                IF P IS OUTSIDE OF THE
+!                                BOUNDARY OF THE MESH, I1
+!                                AND I2 ARE THE FIRST (RIGHT
+!                                -MOST) AND LAST (LEFTMOST)
+!                                NODES WHICH ARE VISIBLE
+!                                FROM P, AND I3 = 0.  IF P
+!                                AND ALL OF THE NODES LIE ON
+!                                A SINGLE LINE THEN I1 = I2
+!                                = I3 = 0.
+!
+! MODULES REFERENCED BY TRFIND - NONE
+!
+! INTRINSIC FUNCTION CALLED BY TRFIND - MAX0
+!
+!***********************************************************
+!
+      INTEGER N0, N1, N2, N3, N4, INDX, IND, NF, &
+              NL, NEXT
+      REAL(dp)    XP, YP
+      REAL(dp)    X1, Y1, X2, Y2, X0, Y0
+      LOGICAL LEFT
+!
+! LOCAL PARAMETERS -
+!
+! XP,YP =     LOCAL VARIABLES CONTAINING PX AND PY
+! N0,N1,N2 =  NODES IN COUNTERCLOCKWISE ORDER DEFINING A
+!               CONE (WITH VERTEX N0) CONTAINING P
+! N3,N4 =     NODES OPPOSITE N1-N2 AND N2-N1, RESPECTIVELY
+! INDX,IND =  INDICES FOR IADJ
+! NF,NL =     FIRST AND LAST NEIGHBORS OF N0 IN IADJ, OR
+!               FIRST (RIGHTMOST) AND LAST (LEFTMOST) NODES
+!               VISIBLE FROM P WHEN P IS OUTSIDE THE
+!               BOUNDARY
+! NEXT =      CANDIDATE FOR I1 OR I2 WHEN P IS OUTSIDE OF
+!               THE BOUNDARY
+! LEFT =      STATEMENT FUNCTION WHICH COMPUTES THE SIGN OF
+!               A CROSS PRODUCT (Z-COMPONENT).  LEFT(X1,...,
+!               Y0) = .TRUE. IFF (X0,Y0) IS ON OR TO THE
+!               LEFT OF THE VECTOR FROM (X1,Y1) TO (X2,Y2).
+!
+      LEFT(X1,Y1,X2,Y2,X0,Y0) = (X2-X1)*(Y0-Y1).GE.(X0-X1)*(Y2-Y1)
+      XP = PX
+      YP = PY
+!
+! INITIALIZE VARIABLES AND FIND A CONE CONTAINING P
+!
+      N0 = MAX0(NST,1)
+    1 INDX = IEND(N0)
+      NL = IADJ(INDX)
+      INDX = 1
+      IF (N0 .NE. 1) INDX = IEND(N0-1) + 1
+      NF = IADJ(INDX)
+      N1 = NF
+      IF (NL .NE. 0) GO TO 3
+!
+! N0 IS A BOUNDARY NODE.  SET NL TO THE LAST NONZERO
+!   NEIGHBOR OF N0.
+!
+      IND = IEND(N0) - 1
+      NL = IADJ(IND)
+      IF ( LEFT(X(N0),Y(N0),X(NF),Y(NF),XP,YP) ) GO TO 2
+!
+! P IS OUTSIDE THE BOUNDARY
+!
+      NL = N0
+      GO TO 16
+    2 IF ( LEFT(X(NL),Y(NL),X(N0),Y(N0),XP,YP) ) GO TO 4
+!
+! P IS OUTSIDE THE BOUNDARY AND N0 IS THE RIGHTMOST
+!   VISIBLE BOUNDARY NODE
+!
+      I1 = N0
+      GO TO 18
+!
+! N0 IS AN INTERIOR NODE.  FIND N1.
+!
+    3 IF ( LEFT(X(N0),Y(N0),X(N1),Y(N1),XP,YP) ) GO TO 4
+      INDX = INDX + 1
+      N1 = IADJ(INDX)
+      IF (N1 .EQ. NL) GO TO 7
+      GO TO 3
+!
+! P IS TO THE LEFT OF ARC N0-N1.  INITIALIZE N2 TO THE NEXT
+!   NEIGHBOR OF N0.
+!
+    4 INDX = INDX + 1
+      N2 = IADJ(INDX)
+      IF (.NOT.LEFT(X(N0),Y(N0),X(N2),Y(N2),XP,YP)) GO TO 8
+      N1 = N2
+      IF (N1 .NE. NL) GO TO 4
+      IF (.NOT.LEFT(X(N0),Y(N0),X(NF),Y(NF),XP,YP)) GO TO 7
+      IF (XP .EQ. X(N0) .AND. YP .EQ. Y(N0)) GO TO 6
+!
+! P IS LEFT OF OR ON ARCS N0-NB FOR ALL NEIGHBORS NB
+!   OF N0.
+! ALL POINTS ARE COLLINEAR IFF P IS LEFT OF NB-N0 FOR
+!   ALL NEIGHBORS NB OF N0.  SEARCH THE NEIGHBORS OF N0
+!   IN REVERSE ORDER.  NOTE -- N1 = NL AND INDX POINTS TO
+!   NL.
+!
+    5 IF (.NOT.LEFT(X(N1),Y(N1),X(N0),Y(N0),XP,YP)) GO TO 6
+      IF (N1 .EQ. NF) GO TO 20
+      INDX = INDX - 1
+      N1 = IADJ(INDX)
+      GO TO 5
+!
+! P IS TO THE RIGHT OF N1-N0, OR P=N0.  SET N0 TO N1 AND
+!   START OVER.
+!
+    6 N0 = N1
+      GO TO 1
+!
+! P IS BETWEEN ARCS N0-N1 AND N0-NF
+!
+    7 N2 = NF
+!
+! P IS CONTAINED IN A CONE DEFINED BY LINE SEGMENTS N0-N1
+!   AND N0-N2 WHERE N1 IS ADJACENT TO N2
+!
+    8 N3 = N0
+    9 IF ( LEFT(X(N1),Y(N1),X(N2),Y(N2),XP,YP) ) GO TO 13
+!
+! SET N4 TO THE FIRST NEIGHBOR OF N2 FOLLOWING N1
+!
+      INDX = IEND(N2)
+      IF (IADJ(INDX) .NE. N1) GO TO 10
+!
+! N1 IS THE LAST NEIGHBOR OF N2.
+! SET N4 TO THE FIRST NEIGHBOR.
+!
+      INDX = 1
+      IF (N2 .NE. 1) INDX = IEND(N2-1) + 1
+      N4 = IADJ(INDX)
+      GO TO 11
+!
+! N1 IS NOT THE LAST NEIGHBOR OF N2
+!
+   10 INDX = INDX-1
+      IF (IADJ(INDX) .NE. N1) GO TO 10
+      N4 = IADJ(INDX+1)
+      IF (N4 .NE. 0) GO TO 11
+!
+! P IS OUTSIDE THE BOUNDARY
+!
+      NF = N2
+      NL = N1
+      GO TO 16
+!
+! DEFINE A NEW ARC N1-N2 WHICH INTERSECTS THE LINE
+!   SEGMENT N0-P
+!
+   11 IF ( LEFT(X(N0),Y(N0),X(N4),Y(N4),XP,YP) ) GO TO 12
+      N3 = N2
+      N2 = N4
+      GO TO 9
+   12 N3 = N1
+      N1 = N4
+      GO TO 9
+!
+! P IS IN THE TRIANGLE (N1,N2,N3) AND NOT ON N2-N3.  IF
+!   N3-N1 OR N1-N2 IS A BOUNDARY ARC CONTAINING P, TREAT P
+!   AS EXTERIOR.
+!
+   13 INDX = IEND(N1)
+      IF (IADJ(INDX) .NE. 0) GO TO 15
+!
+! N1 IS A BOUNDARY NODE.  N3-N1 IS A BOUNDARY ARC IFF N3
+!   IS THE LAST NONZERO NEIGHBOR OF N1.
+!
+      IF (N3 .NE. IADJ(INDX-1)) GO TO 14
+!
+! N3-N1 IS A BOUNDARY ARC
+!
+      IF (.NOT.LEFT(X(N1),Y(N1),X(N3),Y(N3),XP,YP)) GO TO 14
+!
+! P LIES ON N1-N3
+!
+      I1 = N1
+      I2 = N3
+      I3 = 0
+      RETURN
+!
+! N3-N1 IS NOT A BOUNDARY ARC CONTAINING P.  N1-N2 IS A
+!   BOUNDARY ARC IFF N2 IS THE FIRST NEIGHBOR OF N1.
+!
+   14 INDX = 1
+      IF (N1 .NE. 1) INDX = IEND(N1-1) + 1
+      IF (N2 .NE. IADJ(INDX)) GO TO 15
+!
+! N1-N2 IS A BOUNDARY ARC
+!
+      IF (.NOT.LEFT(X(N2),Y(N2),X(N1),Y(N1),XP,YP)) GO TO 15
+!
+! P LIES ON N1-N2
+!
+      I1 = N2
+      I2 = N1
+      I3 = 0
+      RETURN
+!
+! P DOES NOT LIE ON A BOUNDARY ARC.
+!
+   15 I1 = N1
+      I2 = N2
+      I3 = N3
+      RETURN
+!
+! NF AND NL ARE ADJACENT BOUNDARY NODES WHICH ARE VISIBLE
+!   FROM P.  FIND THE FIRST VISIBLE BOUNDARY NODE.
+! SET NEXT TO THE FIRST NEIGHBOR OF NF.
+!
+   16 INDX = 1
+      IF (NF .NE. 1) INDX = IEND(NF-1) + 1
+      NEXT = IADJ(INDX)
+      IF (LEFT(X(NF),Y(NF),X(NEXT),Y(NEXT),XP,YP)) GO TO 17
+      NF = NEXT
+      GO TO 16
+!
+! NF IS THE FIRST (RIGHTMOST) VISIBLE BOUNDARY NODE
+!
+   17 I1 = NF
+!
+! FIND THE LAST VISIBLE BOUNDARY NODE.  NL IS THE FIRST
+!   CANDIDATE FOR I2.
+! SET NEXT TO THE LAST NEIGHBOR OF NL.
+!
+   18 INDX = IEND(NL) - 1
+      NEXT = IADJ(INDX)
+      IF (LEFT(X(NEXT),Y(NEXT),X(NL),Y(NL),XP,YP)) GO TO 19
+      NL = NEXT
+      GO TO 18
+!
+! NL IS THE LAST (LEFTMOST) VISIBLE BOUNDARY NODE
+!
+   19 I2 = NL
+      I3 = 0
+      RETURN
+!
+! ALL POINTS ARE COLLINEAR
+!
+   20 I1 = 0
+      I2 = 0
+      I3 = 0
+      RETURN
+      END
+      SUBROUTINE TRMESH (N,X,Y, IADJ,IEND,IER)
+      INTEGER N, IADJ(*), IEND(N), IER
+      REAL(dp)    X(N), Y(N)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE CREATES A THIESSEN TRIANGULATION OF N
+! ARBITRARILY SPACED POINTS IN THE PLANE REFERRED TO AS
+! NODES.  THE TRIANGULATION IS OPTIMAL IN THE SENSE THAT IT
+! IS AS NEARLY EQUIANGULAR AS POSSIBLE.  TRMESH IS PART OF
+! AN INTERPOLATION PACKAGE WHICH ALSO PROVIDES SUBROUTINES
+! TO REORDER THE NODES, ADD A NEW NODE, DELETE AN ARC, PLOT
+! THE MESH, AND PRINT THE DATA STRUCTURE.
+!   UNLESS THE NODES ARE ALREADY ORDERED IN SOME REASONABLE
+! FASHION, THEY SHOULD BE REORDERED BY SUBROUTINE REORDR FOR
+! INCREASED EFFICIENCY BEFORE CALLING TRMESH.
+!
+! INPUT PARAMETERS -     N - NUMBER OF NODES IN THE MESH.
+!                            N .GE. 3.
+!
+!                      X,Y - N-VECTORS OF COORDINATES.
+!                            (X(I),Y(I)) DEFINES NODE I.
+!
+!                     IADJ - VECTOR OF LENGTH .GE. 6*N-9.
+!
+!                     IEND - VECTOR OF LENGTH .GE. N.
+!
+! N, X, AND Y ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - IADJ - ADJACENCY LISTS OF NEIGHBORS IN
+!                            COUNTERCLOCKWISE ORDER.  THE
+!                            LIST FOR NODE I+1 FOLLOWS THAT
+!                            FOR NODE I WHERE X AND Y DEFINE
+!                            THE ORDER.  THE VALUE 0 DENOTES
+!                            THE BOUNDARY (OR A PSEUDO-NODE
+!                            AT INFINITY) AND IS ALWAYS THE
+!                            LAST NEIGHBOR OF A BOUNDARY
+!                            NODE.  IADJ IS UNCHANGED IF IER
+!                            .NE. 0.
+!
+!                     IEND - POINTERS TO THE ENDS OF
+!                            ADJACENCY LISTS (SETS OF
+!                            NEIGHBORS) IN IADJ.  THE
+!                            NEIGHBORS OF NODE 1 BEGIN IN
+!                            IADJ(1).  FOR K .GT. 1, THE
+!                            NEIGHBORS OF NODE K BEGIN IN
+!                            IADJ(IEND(K-1)+1) AND K HAS
+!                            IEND(K) - IEND(K-1) NEIGHBORS
+!                            INCLUDING (POSSIBLY) THE
+!                            BOUNDARY.  IADJ(IEND(K)) .EQ. 0
+!                            IFF NODE K IS ON THE BOUNDARY.
+!                            IEND IS UNCHANGED IF IER = 1.
+!                            IF IER = 2 IEND CONTAINS THE
+!                            INDICES OF A SEQUENCE OF N
+!                            NODES ORDERED FROM LEFT TO
+!                            RIGHT WHERE LEFT AND RIGHT ARE
+!                            DEFINED BY ASSUMING NODE 1 IS
+!                            TO THE LEFT OF NODE 2.
+!
+!                      IER - ERROR INDICATOR
+!                            IER = 0 IF NO ERRORS WERE
+!                                    ENCOUNTERED.
+!                            IER = 1 IF N .LT. 3.
+!                            IER = 2 IF N .GE. 3 AND ALL
+!                                    NODES ARE COLLINEAR.
+!
+! MODULES REFERENCED BY TRMESH - SHIFTD, ADNODE, TRFIND,
+!                                INTADD, BDYADD, SWPTST,
+!                                SWAP, INDEX
+!
+!***********************************************************
+!
+      INTEGER NN, K, KM1, NL, NR, IND, INDX, N0, ITEMP, &
+              IERR, KM1D2, KMI, I, KMIN
+      REAL(dp)    XL, YL, XR, YR, DXR, DYR, XK, YK, DXK, DYK, &
+              CPROD, SPROD
+!
+! LOCAL PARAMETERS -
+!
+! NN =          LOCAL COPY OF N
+! K =           NODE (INDEX) TO BE INSERTED INTO IEND
+! KM1 =         K-1 - (VARIABLE) LENGTH OF IEND
+! NL,NR =       IEND(1), IEND(KM1) -- LEFTMOST AND RIGHTMOST
+!                 NODES IN IEND AS VIEWED FROM THE RIGHT OF
+!                 1-2 WHEN IEND CONTAINS THE INITIAL ORDERED
+!                 SET OF NODAL INDICES
+! XL,YL,XR,YR = X AND Y COORDINATES OF NL AND NR
+! DXR,DYR =     XR-XL, YR-YL
+! XK,YK =       X AND Y COORDINATES OF NODE K
+! DXK,DYK =     XK-XL, YK-YL
+! CPROD =       VECTOR CROSS PRODUCT OF NL-NR AND NL-K --
+!                 USED TO DETERMINE THE POSITION OF NODE K
+!                 WITH RESPECT TO THE LINE DEFINED BY THE
+!                 NODES IN IEND
+! SPROD =       SCALAR PRODUCT USED TO DETERMINE THE
+!                 INTERVAL CONTAINING NODE K WHEN K IS ON
+!                 THE LINE DEFINED BY THE NODES IN IEND
+! IND,INDX =    INDICES FOR IEND AND IADJ, RESPECTIVELY
+! N0,ITEMP =    TEMPORARY NODES (INDICES)
+! IERR =        DUMMY PARAMETER FOR CALL TO ADNODE
+! KM1D2,KMI,I = KM1/2, K-I, DO-LOOP INDEX -- USED IN IEND
+!                 REORDERING LOOP
+! KMIN =        FIRST NODE INDEX SENT TO ADNODE
+!
+      NN = N
+      IER = 1
+      IF (NN .LT. 3) RETURN
+      IER = 0
+!
+! INITIALIZE IEND, NL, NR, AND K
+!
+      IEND(1) = 1
+      IEND(2) = 2
+      XL = X(1)
+      YL = Y(1)
+      XR = X(2)
+      YR = Y(2)
+      K = 2
+!
+! BEGIN LOOP ON NODES 3,4,...
+!
+    1 DXR = XR-XL
+      DYR = YR-YL
+!
+! NEXT LOOP BEGINS HERE IF NL AND NR ARE UNCHANGED
+!
+    2 IF (K .EQ. NN) GO TO 13
+      KM1 = K
+      K = KM1 + 1
+      XK = X(K)
+      YK = Y(K)
+      DXK = XK-XL
+      DYK = YK-YL
+      CPROD = DXR*DYK - DXK*DYR
+      IF (CPROD .GT. 0.) GO TO 6
+      IF (CPROD .LT. 0.) GO TO 8
+!
+! NODE K LIES ON THE LINE CONTAINING NODES 1,2,...,K-1.
+!   SET SPROD TO (NL-NR,NL-K).
+!
+      SPROD = DXR*DXK + DYR*DYK
+      IF (SPROD .GT. 0.) GO TO 3
+!
+! NODE K IS TO THE LEFT OF NL.  INSERT K AS THE FIRST
+!   (LEFTMOST) NODE IN IEND AND SET NL TO K.
+!
+      CALL SHIFTD(1,KM1,1, IEND )
+      IEND(1) = K
+      XL = XK
+      YL = YK
+      GO TO 1
+!
+! NODE K IS TO THE RIGHT OF NL.  FIND THE LEFTMOST NODE
+!   N0 WHICH LIES TO THE RIGHT OF K.
+!   SET SPROD TO (N0-NL,N0-K).
+!
+    3 DO 4 IND = 2,KM1
+        N0 = IEND(IND)
+        SPROD = (XL-X(N0))*(XK-X(N0)) + (YL-Y(N0))*(YK-Y(N0))
+        IF (SPROD .GE. 0.) GO TO 5
+    4   CONTINUE
+!
+! NODE K IS TO THE RIGHT OF NR.  INSERT K AS THE LAST
+!   (RIGHTMOST) NODE IN IEND AND SET NR TO K.
+!
+      IEND(K) = K
+      XR = XK
+      YR = YK
+      GO TO 1
+!
+! NODE K LIES BETWEEN IEND(IND-1) AND IEND(IND).  INSERT K
+!   IN IEND.
+!
+    5 CALL SHIFTD(IND,KM1,1, IEND )
+      IEND(IND) = K
+      GO TO 2
+!
+! NODE K IS TO THE LEFT OF NL-NR.  REORDER IEND SO THAT NL
+!   IS THE LEFTMOST NODE AS VIEWED FROM K.
+!
+    6 KM1D2 = KM1/2
+      DO 7 I = 1,KM1D2
+        KMI = K-I
+        ITEMP = IEND(I)
+        IEND(I) = IEND(KMI)
+        IEND(KMI) = ITEMP
+    7   CONTINUE
+!
+! NODE K IS TO THE RIGHT OF NL-NR.  CREATE A TRIANGULATION
+!   CONSISTING OF NODES 1,2,...,K.
+!
+    8 NL = IEND(1)
+      NR = IEND(KM1)
+!
+! CREATE THE ADJACENCY LISTS FOR THE FIRST K-1 NODES.
+!   INSERT NEIGHBORS IN REVERSE ORDER.  EACH NODE HAS FOUR
+!   NEIGHBORS EXCEPT NL AND NR WHICH HAVE THREE.
+!
+      DO 9 IND = 1,KM1
+        N0 = IEND(IND)
+        INDX = 4*N0
+        IF (N0 .GE. NL) INDX = INDX-1
+        IF (N0 .GE. NR) INDX = INDX-1
+        IADJ(INDX) = 0
+        INDX = INDX-1
+        IF (IND .LT. KM1) IADJ(INDX) = IEND(IND+1)
+        IF (IND .LT. KM1) INDX = INDX-1
+        IADJ(INDX) = K
+        IF (IND .EQ. 1) GO TO 9
+        IADJ(INDX-1) = IEND(IND-1)
+    9   CONTINUE
+!
+! CREATE THE ADJACENCY LIST FOR NODE K
+!
+      INDX = 5*KM1 - 1
+      IADJ(INDX) = 0
+      DO 10 IND = 1,KM1
+        INDX = INDX-1
+        IADJ(INDX) = IEND(IND)
+   10   CONTINUE
+!
+! REPLACE IEND ELEMENTS WITH POINTERS TO IADJ
+!
+      INDX = 0
+      DO 11 IND = 1,KM1
+        INDX = INDX + 4
+        IF (IND .EQ. NL  .OR.  IND .EQ. NR) INDX = INDX-1
+        IEND(IND) = INDX
+   11   CONTINUE
+      INDX = INDX + K
+      IEND(K) = INDX
+!
+! ADD THE REMAINING NODES TO THE TRIANGULATION
+!
+      IF (K .EQ. NN) RETURN
+      KMIN = K+1
+      DO 12 K = KMIN,NN
+        CALL ADNODE(K,X,Y, IADJ,IEND, IERR)
+   12   CONTINUE
+      RETURN
+!
+! ALL NODES ARE COLLINEAR
+!
+   13 IER = 2
+      RETURN
+      END
+
+      SUBROUTINE COORDS (X,Y,X1,X2,X3,Y1,Y2,Y3, R,IER)
+      INTEGER IER
+      REAL(dp)    X, Y, X1, X2, X3, Y1, Y2, Y3, R(3)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE COMPUTES THE THREE BARYCENTRIC COORDINATES
+! OF A POINT IN THE PLANE FOR A GIVEN TRIANGLE.
+!
+! INPUT PARAMETERS - X,Y - X AND Y COORDINATES OF THE POINT
+!                          WHOSE BARYCENTRIC COORDINATES ARE
+!                          DESIRED.
+!
+!      X1,X2,X3,Y1,Y2,Y3 - COORDINATES OF THE VERTICES OF
+!                          THE TRIANGLE.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS -  R - 3-VECTOR OF BARYCENTRIC COORDI-
+!                          NATES UNLESS IER = 1.  NOTE THAT
+!                          R(I) .LT. 0. IFF (X,Y) IS TO THE
+!                          RIGHT OF THE VECTOR FROM VERTEX
+!                          I+1 TO VERTEX I+2 (CYCLICAL
+!                          ARITHMETIC).
+!
+!                    IER - ERROR INDICATOR
+!                          IER = 0 IF NO ERRORS WERE
+!                                  ENCOUNTERED.
+!                          IER = 1 IF THE VERTICES OF THE
+!                                  TRIANGLE ARE COLLINEAR.
+!
+! MODULES REFERENCED BY COORDS - NONE
+!
+!***********************************************************
+!
+      REAL(dp)    U(3), V(3), AREA, XP, YP
+!
+! LOCAL PARAMETERS -
+!
+! U(K),V(K) = X AND Y COMPONENTS OF THE VECTOR REPRESENTING
+!               THE SIDE OPPOSITE VERTEX K FOR K = 1,2,3.
+! AREA =      TWICE THE AREA OF THE TRIANGLE.
+! XP,YP =     X-X1, Y-Y1
+!
+      U(1) = X3-X2
+      U(2) = X1-X3
+      U(3) = X2-X1
+!
+      V(1) = Y3-Y2
+      V(2) = Y1-Y3
+      V(3) = Y2-Y1
+!
+! AREA = 3-1 X 3-2
+!
+      AREA = U(1)*V(2) - U(2)*V(1)
+      IF (AREA .EQ. 0.) GO TO 1
+!
+! R(1) = (2-3 X 2-(X,Y))/AREA, R(2) = (1-(X,Y) X 1-3)/AREA,
+!   R(3) = (1-2 X 1-(X,Y))/AREA
+!
+      R(1) = (U(1)*(Y-Y2) - V(1)*(X-X2))/AREA
+      XP = X - X1
+      YP = Y - Y1
+      R(2) = (U(2)*YP - V(2)*XP)/AREA
+      R(3) = (U(3)*YP - V(3)*XP)/AREA
+      IER = 0
+      RETURN
+!
+! VERTICES ARE COLLINEAR
+!
+    1 IER = 1
+      RETURN
+      END
+      SUBROUTINE GIVENS ( A,B, C,S)
+      REAL(dp) A, B, C, S
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE CONSTRUCTS THE GIVENS PLANE ROTATION --
+!     ( C  S)
+! G = (     ) WHERE C*C + S*S = 1 -- WHICH ZEROS THE SECOND
+!     (-S  C)
+! ENTRY OF THE 2-VECTOR (A B)-TRANSPOSE.  A CALL TO GIVENS
+! IS NORMALLY FOLLOWED BY A CALL TO ROTATE WHICH APPLIES
+! THE TRANSFORMATION TO A 2 BY N MATRIX.  THIS ROUTINE WAS
+! TAKEN FROM LINPACK.
+!
+! INPUT PARAMETERS - A,B - COMPONENTS OF THE 2-VECTOR TO BE
+!                          ROTATED.
+!
+! OUTPUT PARAMETERS -  A - OVERWRITTEN BY R = +/-SQRT(A*A
+!                          + B*B)
+!
+!                      B - OVERWRITTEN BY A VALUE Z WHICH
+!                          ALLOWS C AND S TO BE RECOVERED
+!                          AS FOLLOWS -
+!                          C = SQRT(1-Z*Z), S=Z IF ABS(Z)
+!                              .LE. 1.
+!                          C = 1/Z, S = SQRT(1-C*C) IF
+!                              ABS(Z) .GT. 1.
+!
+!                      C - +/-(A/R)
+!
+!                      S - +/-(B/R)
+!
+! MODULES REFERENCED BY GIVENS - NONE
+!
+! INTRINSIC FUNCTIONS CALLED BY GIVENS - ABS, SQRT
+!
+!***********************************************************
+!
+      REAL(dp) AA, BB, R, U, V
+!
+! LOCAL PARAMETERS -
+!
+! AA,BB = LOCAL COPIES OF A AND B
+! R =     C*A + S*B = +/-SQRT(A*A+B*B)
+! U,V =   VARIABLES USED TO SCALE A AND B FOR COMPUTING R
+!
+      AA = A
+      BB = B
+      IF (ABS(AA) .LE. ABS(BB)) GO TO 1
+!
+! ABS(A) .GT. ABS(B)
+!
+      U = AA + AA
+      V = BB/U
+      R = SQRT(0.25d0 + V*V) * U
+      C = AA/R
+      S = V * (C + C)
+!
+! NOTE THAT R HAS THE SIGN OF A, C .GT. 0, AND S HAS
+!   SIGN(A)*SIGN(B)
+!
+      B = S
+      A = R
+      RETURN
+!
+! ABS(A) .LE. ABS(B)
+!
+    1 IF (BB .EQ. 0.) GO TO 2
+      U = BB + BB
+      V = AA/U
+!
+! STORE R IN A
+!
+      A = SQRT(0.25d0 + V*V) * U
+      S = BB/A
+      C = V * (S + S)
+!
+! NOTE THAT R HAS THE SIGN OF B, S .GT. 0, AND C HAS
+!   SIGN(A)*SIGN(B)
+!
+      B = 1.
+      IF (C .NE. 0.) B = 1./C
+      RETURN
+!
+! A = B = 0.
+!
+    2 C = 1.
+      S = 0.
+      RETURN
+      END
+
+      SUBROUTINE INTRC0 (N, PX, PY, X, Y, Z, IADJ, IEND, IST, PZ, IER)
+      INTEGER N, IADJ(*), IEND(N), IST, IER
+      REAL(dp)    PX, PY, X(N), Y(N), Z(N), PZ
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN A TRIANGULATION OF A SET OF POINTS IN THE PLANE,
+! THIS ROUTINE COMPUTES THE VALUE AT (PX,PY) OF A PIECEWISE
+! LINEAR SURFACE WHICH INTERPOLATES DATA VALUES AT THE
+! VERTICES OF THE TRIANGLES.  THE SURFACE IS EXTENDED IN A
+! CONTINUOUS FASHION BEYOND THE BOUNDARY OF THE TRIANGULAR
+! MESH, ALLOWING EXTRAPOLATION.  INTRC0 IS PART OF AN
+! INTERPOLATION PACKAGE WHICH PROVIDES ROUTINES TO GENERATE,
+! UPDATE, AND PLOT THE MESH.
+!
+! INPUT PARAMETERS -     N - NUMBER OF NODES IN THE MESH.
+!                            N .GE. 3.
+!
+!                    PX,PY - POINT AT WHICH THE INTERPOLATED
+!                            VALUE IS DESIRED.
+!
+!                      X,Y - VECTORS OF COORDINATES OF THE
+!                            NODES IN THE MESH.
+!
+!                        Z - VECTOR OF DATA VALUES AT THE
+!                            NODES.
+!
+!                     IADJ - SET OF ADJACENCY LISTS OF NODES
+!                            IN THE MESH.
+!
+!                     IEND - POINTERS TO THE ENDS OF
+!                            ADJACENCY LISTS IN IADJ FOR
+!                            EACH NODE IN THE MESH.
+!
+!                      IST - INDEX OF THE STARTING NODE IN
+!                            THE SEARCH FOR A TRIANGLE CON-
+!                            TAINING (PX,PY).  1 .LE. IST
+!                            .LE. N.  THE OUTPUT VALUE OF
+!                            IST FROM A PREVIOUS CALL MAY
+!                            BE A GOOD CHOICE.
+!
+! IADJ AND IEND MAY BE CREATED BY TRMESH.
+!
+! INPUT PARAMETERS OTHER THAN IST ARE NOT ALTERED BY THIS
+!   ROUTINE.
+!
+! OUTPUT PARAMETERS -  IST - INDEX OF ONE OF THE VERTICES OF
+!                            THE TRIANGLE CONTAINING (PX,PY)
+!                            UNLESS IER .LT. 0.
+!
+!                       PZ - VALUE OF THE INTERPOLATORY
+!                            SURFACE AT (PX,PY) OR ZERO
+!                            IF IER .LT. 0.
+!
+!                      IER - ERROR INDICATOR
+!                            IER = 0 IF NO ERRORS WERE
+!                                    ENCOUNTERED.
+!                            IER = 1 IF NO ERRORS WERE EN-
+!                                    COUNTERED AND EXTRAPO-
+!                                    LATION WAS PERFORMED.
+!                            IER = -1 IF N OR IST IS OUT OF
+!                                     RANGE.
+!                            IER = -2 IF THE NODES ARE COL-
+!                                     LINEAR.
+!
+! MODULES REFERENCED BY INTRC0 - TRFIND, COORDS
+!
+!***********************************************************
+!
+      INTEGER I1, I2, I3, N1, N2, INDX
+      REAL(dp) XP, YP, R(3), X1, Y1, X2, Y2, DP
+!
+! LOCAL PARAMETERS -
+!
+! I1,I2,I3 = VERTEX INDICES RETURNED BY TRFIND
+! N1,N2 =    ENDPOINTS OF THE CLOSEST BOUNDARY EDGE TO P
+!              WHEN P IS OUTSIDE OF THE MESH BOUNDARY
+! INDX =     IADJ INDEX OF N1 AS A NEIGHBOR OF N2
+! XP,YP =    LOCAL COPIES OF THE COORDINATES OF P=(PX,PY)
+! R =        BARYCENTRIC COORDINATES
+! X1,Y1 =    X,Y COORDINATES OF N1
+! X2,Y2 =    X,Y COORDINATES OF N2
+! DP =       INNER PRODUCT OF N1-N2 AND P-N2
+!
+      IF ((N.LT.3).OR.(IST.LT.1).OR.(IST.GT.N)) GO TO 5
+      XP = PX
+      YP = PY
+!
+! FIND A TRIANGLE CONTAINING P IF P IS WITHIN THE MESH
+!   BOUNDARY
+!
+      CALL TRFIND(IST,XP,YP,X,Y,IADJ,IEND, I1,I2,I3)
+      IF (I1 .EQ. 0) GO TO 6
+      IST = I1
+      IF (I3 .EQ. 0) GO TO 1
+!
+! COMPUTE BARYCENTRIC COORDINATES
+!
+      CALL COORDS(XP,YP,X(I1),X(I2),X(I3),Y(I1),Y(I2), &
+                  Y(I3), R,IER)
+      IF (IER .NE. 0) GO TO 6
+      PZ = R(1)*Z(I1) + R(2)*Z(I2) + R(3)*Z(I3)
+      RETURN
+!
+! P IS OUTSIDE OF THE MESH BOUNDARY.  EXTRAPOLATE TO P BY
+!   EXTENDING THE INTERPOLATORY SURFACE AS A CONSTANT
+!   BEYOND THE BOUNDARY.  THUS PZ IS THE SURFACE FUNCTION
+!   VALUE AT Q WHERE Q IS THE CLOSEST BOUNDARY POINT TO P.
+!
+! DETERMINE Q BY TRAVERSING THE BOUNDARY STARTING FROM THE
+!   RIGHTMOST VISIBLE NODE I1.
+!
+    1 N2 = I1
+!
+! SET N1 TO THE LAST NONZERO NEIGHBOR OF N2 AND COMPUTE DP
+!
+    2 INDX = IEND(N2) - 1
+      N1 = IADJ(INDX)
+      X1 = X(N1)
+      Y1 = Y(N1)
+      X2 = X(N2)
+      Y2 = Y(N2)
+      DP = (X1-X2)*(XP-X2) + (Y1-Y2)*(YP-Y2)
+      IF (DP .LE. 0.) GO TO 3
+      IF ((XP-X1)*(X2-X1) + (YP-Y1)*(Y2-Y1) .GT. 0.) GO TO 4
+      N2 = N1
+      GO TO 2
+!
+! N2 IS THE CLOSEST BOUNDARY POINT TO P
+!
+    3 PZ = Z(N2)
+      IER = 1
+      RETURN
+!
+! THE CLOSEST BOUNDARY POINT TO P LIES ON N2-N1.  COMPUTE
+!   ITS COORDINATES WITH RESPECT TO N2-N1.
+!
+    4 R(1) = DP/( (X2-X1)**2 + (Y2-Y1)**2 )
+      R(2) = 1. - R(1)
+      PZ = R(1)*Z(N1) + R(2)*Z(N2)
+      IER = 1
+      RETURN
+!
+! N .LT. 3 OR IST IS OUT OF RANGE
+!
+    5 PZ = 0.
+      IER = -1
+      RETURN
+!
+! NODES ARE COLLINEAR
+!
+    6 PZ = 0.
+      IER = -2
+      RETURN
+      END
+
+      SUBROUTINE ROTATE (N,C,S, X,Y )
+      INTEGER N
+      REAL(dp)    C, S, X(N), Y(N)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!                                            ( C  S)
+!   THIS ROUTINE APPLIES THE GIVENS ROTATION (     ) TO THE
+!                                            (-S  C)
+!               (X(1) ... X(N))
+! 2 BY N MATRIX (             ).  THIS ROUTINE WAS TAKEN
+!               (Y(1) ... Y(N))
+! LINPACK.
+!
+! INPUT PARAMETERS -   N - NUMBER OF COLUMNS TO BE ROTATED.
+!
+!                    C,S - ELEMENTS OF THE GIVENS ROTATION.
+!                          THESE MAY BE DETERMINED BY
+!                          SUBROUTINE GIVENS.
+!
+!                    X,Y - VECTORS OF LENGTH .GE. N
+!                          CONTAINING THE 2-VECTORS TO BE
+!                          ROTATED.
+!
+!   THE PARAMETERS N, C, AND S ARE NOT ALTERED BY THIS
+! ROUTINE.
+!
+! OUTPUT PARAMETERS - X,Y - ROTATED VECTORS
+!
+! MODULES REFERENCED BY ROTATE - NONE
+!
+!***********************************************************
+!
+      INTEGER I
+      REAL(dp)    XI, YI
+!
+! LOCAL PARAMETERS -
+!
+! I =     DO-LOOP INDEX
+! XI,YI = X(I), Y(I)
+!
+      IF (N .LE. 0 .OR. (C .EQ. 1. .AND. S .EQ. 0.)) RETURN
+      DO 1 I = 1,N
+        XI = X(I)
+        YI = Y(I)
+        X(I) = C*XI + S*YI
+        Y(I) = -S*XI + C*YI
+    1   CONTINUE
+      RETURN
+      END
+      SUBROUTINE SETUP (XK,YK,ZK,XI,YI,ZI,S1,S2,R, ROW)
+      REAL(dp) XK, YK, ZK, XI, YI, ZI, S1, S2, R, ROW(6)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE SETS UP THE I-TH ROW OF AN AUGMENTED RE-
+! GRESSION MATRIX FOR A WEIGHTED LEAST-SQUARES FIT OF A
+! QUADRATIC FUNCTION Q(X,Y) TO A SET OF DATA VALUES Z WHERE
+! Q(XK,YK) = ZK.  THE FIRST 3 COLUMNS (QUADRATIC TERMS) ARE
+! SCALED BY 1/S2 AND THE FOURTH AND FIFTH COLUMNS (LINEAR
+! TERMS) ARE SCALED BY 1/S1.  THE WEIGHT IS (R-D)/(R*D) IF
+! R .GT. D AND 0 IF R .LE. D, WHERE D IS THE DISTANCE
+! BETWEEN NODES I AND K.
+!
+! INPUT PARAMETERS - XK,YK,ZK - COORDINATES AND DATA VALUE
+!                               AT NODE K -- INTERPOLATED
+!                               BY Q.
+!
+!                    XI,YI,ZI - COORDINATES AND DATA VALUE
+!                               AT NODE I.
+!
+!                       S1,S2 - INVERSE SCALE FACTORS.
+!
+!                           R - RADIUS OF INFLUENCE ABOUT
+!                               NODE K DEFINING THE WEIGHT.
+!
+!                         ROW - VECTOR OF LENGTH 6.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETER - ROW - VECTOR CONTAINING A ROW OF THE
+!                          AUGMENTED REGRESSION MATRIX.
+!
+! MODULES REFERENCED BY SETUP - NONE
+!
+! INTRINSIC FUNCTION CALLED BY SETUP - SQRT
+!
+!***********************************************************
+!
+      INTEGER I
+      REAL(dp)    DX, DY, DXSQ, DYSQ, D, W, W1, W2
+!
+! LOCAL PARAMETERS -
+!
+! I =    DO-LOOP INDEX
+! DX =   XI - XK
+! DY =   YI - YK
+! DXSQ = DX*DX
+! DYSQ = DY*DY
+! D =    DISTANCE BETWEEN NODES K AND I
+! W =    WEIGHT ASSOCIATED WITH THE ROW
+! W1 =   W/S1
+! W2 =   W/S2
+!
+      DX = XI - XK
+      DY = YI - YK
+      DXSQ = DX*DX
+      DYSQ = DY*DY
+      D = SQRT(DXSQ + DYSQ)
+      IF (D .LE. 0.  .OR.  D .GE. R) GO TO 1
+      W = (R-D)/R/D
+      W1 = W/S1
+      W2 = W/S2
+      ROW(1) = DXSQ*W2
+      ROW(2) = DX*DY*W2
+      ROW(3) = DYSQ*W2
+      ROW(4) = DX*W1
+      ROW(5) = DY*W1
+      ROW(6) = (ZI - ZK)*W
+      RETURN
+!
+! NODES K AND I COINCIDE OR NODE I IS OUTSIDE OF THE RADIUS
+!   OF INFLUENCE.  SET ROW TO THE ZERO VECTOR.
+!
+    1 DO I = 1,6
+         ROW(I) = 0.
+      enddo  
+      RETURN
+      END
+
+      SUBROUTINE TVAL (X,Y,X1,X2,X3,Y1,Y2,Y3,Z1,Z2,Z3,ZX1, &
+                       ZX2,ZX3,ZY1,ZY2,ZY3,IFLAG, W,WX,WY, &
+                       IER)
+      INTEGER IFLAG, IER
+      REAL(dp)    X, Y, X1, X2, X3, Y1, Y2, Y3, Z1, Z2, Z3, &
+              ZX1, ZX2, ZX3, ZY1, ZY2, ZY3, W, WX, WY
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN FUNCTION VALUES AND FIRST PARTIAL DERIVATIVES AT
+! THE THREE VERTICES OF A TRIANGLE, THIS ROUTINE DETERMINES
+! A FUNCTION W WHICH AGREES WITH THE GIVEN DATA, RETURNING
+! THE VALUE AND (OPTIONALLY) FIRST PARTIAL DERIVATIVES OF W
+! AT A POINT (X,Y) IN THE TRIANGLE.  THE INTERPOLATION
+! METHOD IS EXACT FOR QUADRATIC POLYNOMIAL DATA.  THE
+! TRIANGLE IS PARTITIONED INTO THREE SUBTRIANGLES WITH
+! EQUAL AREAS.  W IS CUBIC IN EACH SUBTRIANGLE AND ALONG
+! THE EDGES, BUT HAS ONLY ONE CONTINUOUS DERIVATIVE ACROSS
+! EDGES.  THE NORMAL DERIVATIVE OF W VARIES LINEARLY ALONG
+! EACH OUTER EDGE.  THE VALUES AND PARTIAL DERIVATIVES OF W
+! ALONG A TRIANGLE EDGE DEPEND ONLY ON THE DATA VALUES AT
+! THE ENDPOINTS OF THE EDGE.  THUS THE METHOD YIELDS C-1
+! CONTINUITY WHEN USED TO INTERPOLATE OVER A TRIANGULAR
+! GRID.  THIS ALGORITHM IS DUE TO C. L. LAWSON.
+!
+! INPUT PARAMETERS -   X,Y - COORDINATES OF A POINT AT WHICH
+!                            W IS TO BE EVALUATED.
+!
+!        X1,X2,X3,Y1,Y2,Y3 - COORDINATES OF THE VERTICES OF
+!                            A TRIANGLE CONTAINING (X,Y).
+!
+!                 Z1,Z2,Z3 - FUNCTION VALUES AT THE VERTICES
+!                            TO BE INTERPOLATED.
+!
+!              ZX1,ZX2,ZX3 - X-DERIVATIVE VALUES AT THE
+!                            VERTICES.
+!
+!              ZY1,ZY2,ZY3 - Y-DERIVATIVE VALUES AT THE
+!                            VERTICES.
+!
+!                    IFLAG - OPTION INDICATOR
+!                            IFLAG = 0 IF ONLY W IS TO BE
+!                                      COMPUTED.
+!                            IFLAG = 1 IF W, WX, AND WY ARE
+!                                      TO BE RETURNED.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS -   W - ESTIMATED VALUE OF THE INTERP-
+!                           OLATORY FUNCTION AT (X,Y) IF
+!                           IER = 0.  OTHERWISE W = 0.
+!
+!                   WX,WY - PARTIAL DERIVATIVES OF W AT
+!                           (X,Y) IF IER = 0 AND IFLAG = 1,
+!                           UNCHANGED IF IFLAG .NE. 1, ZERO
+!                           IF IER .NE. 0 AND IFLAG = 1.
+!
+!                     IER - ERROR INDICATOR
+!                           IER = 0 IF NO ERRORS WERE
+!                                   ENCOUNTERED.
+!                           IER = 1 IF THE VERTICES OF THE
+!                                   TRIANGLE ARE COLLINEAR.
+!
+! MODULES REFERENCED BY TVAL - NONE
+!
+! INTRINSIC FUNCTION CALLED BY TVAL - AMIN1
+!
+!***********************************************************
+!
+      INTEGER I, IP1, IP2, IP3
+      REAL(dp)    U(3), V(3), SL(3), AREA, XP, YP, R(3), RX(3), &
+              RY(3), PHI(3), PHIX(3), PHIY(3), RMIN, C1, C2, &
+              RO(3), ROX(3), ROY(3), F(3), G(3), GX(3), &
+              GY(3), P(3), PX(3), PY(3), Q(3), QX(3), QY(3), &
+              A(3), AX(3), AY(3), B(3), BX(3), BY(3), C(3), &
+              CX(3), CY(3)
+!
+! LOCAL PARAMETERS -
+!
+! I =               DO-LOOP INDEX
+! IP1,IP2,IP3 =     PERMUTED INDICES FOR COMPUTING RO, ROX,
+!                     AND ROY
+! U(K) =            X-COMPONENT OF THE VECTOR REPRESENTING
+!                     THE SIDE OPPOSITE VERTEX K
+! V(K) =            Y-COMPONENT OF THE VECTOR REPRESENTING
+!                     THE SIDE OPPOSITE VERTEX K
+! SL(K) =           SQUARE OF THE LENGTH OF THE SIDE
+!                     OPPOSITE VERTEX K
+! AREA =            TWICE THE AREA OF THE TRIANGLE
+! XP,YP =           X-X1, Y-Y1
+! R(K) =            K-TH BARYCENTRIC COORDINATE
+! RX(K),RY(K) =     X,Y PARTIAL DERIVATIVES OF R(K)
+! PHI(K)            R(K-1)*R(K+1) -- QUADRATIC
+! PHIX(K),PHIY(K) = X,Y PARTIALS OF PHI(K)
+! RMIN =            MIN(R1,R2,R3)
+! C1,C2 =           FACTORS FOR COMPUTING RO
+! RO(K) =           FACTORS FOR COMPUTING G -- CUBIC
+!                     CORRECTION TERMS
+! ROX(K),ROY(K) =   X,Y PARTIALS OF RO(K)
+! F(K) =            FACTORS FOR COMPUTING G, GX, AND GY --
+!                     CONSTANT
+! G(K) =            FACTORS FOR COMPUTING THE CARDINAL
+!                     FUNCTIONS -- CUBIC
+! GX(K),GY(K) =     X,Y PARTIALS OF G(K)
+! P(K) =            G(K) + PHI(K)
+! PX(K),PY(K) =     X,Y PARTIALS OF P(K)
+! Q(K) =            G(K) - PHI(K)
+! QX(K),QY(K) =     X,Y PARTIALS OF Q(K)
+! A(K) =            CARDINAL FUNCTION WHOSE COEFFICIENT IS
+!                     Z(K)
+! AX(K),AY(K) =     X,Y PARTIALS OF A(K) -- CARDINAL
+!                     FUNCTIONS FOR WX AND WY
+! B(K) =            TWICE THE CARDINAL FUNCTION WHOSE
+!                     COEFFICIENT IS ZX(K)
+! BX(K),BY(K) =     X,Y PARTIALS OF B(K)
+! C(K) =            TWICE THE CARDINAL FUNCTION WHOSE
+!                     COEFFICIENT IS ZY(K)
+! CX(K),CY(K) =     X,Y PARTIALS OF C(K)
+!
+      U(1) = X3 - X2
+      U(2) = X1 - X3
+      U(3) = X2 - X1
+!
+      V(1) = Y3 - Y2
+      V(2) = Y1 - Y3
+      V(3) = Y2 - Y1
+!
+      DO 1 I = 1,3
+        SL(I) = U(I)*U(I) + V(I)*V(I)
+    1   CONTINUE
+!
+! AREA = 3-1 X 3-2
+!
+      AREA = U(1)*V(2) - U(2)*V(1)
+      IF (AREA .EQ. 0.) GO TO 9
+!
+! R(1) = (2-3 X 2-(X,Y))/AREA, R(2) = (1-(X,Y) X 1-3)/AREA,
+!   R(3) = (1-2 X 1-(X,Y))/AREA
+!
+      R(1) = (U(1)*(Y-Y2) - V(1)*(X-X2))/AREA
+      XP = X - X1
+      YP = Y - Y1
+      R(2) = (U(2)*YP - V(2)*XP)/AREA
+      R(3) = (U(3)*YP - V(3)*XP)/AREA
+      IER = 0
+!
+      PHI(1) = R(2)*R(3)
+      PHI(2) = R(3)*R(1)
+      PHI(3) = R(1)*R(2)
+!
+      RMIN = AMIN1(R(1),R(2),R(3))
+      IF (RMIN .NE. R(1)) GO TO 3
+      IP1 = 1
+      IP2 = 2
+      IP3 = 3
+      GO TO 5
+    3 IF (RMIN .NE. R(2)) GO TO 4
+      IP1 = 2
+      IP2 = 3
+      IP3 = 1
+      GO TO 5
+    4 IP1 = 3
+      IP2 = 1
+      IP3 = 2
+!
+    5 C1 = RMIN*RMIN/2.
+      C2 = RMIN/3.
+      RO(IP1) = (PHI(IP1) + 5.*C1/3.)*R(IP1) - C1
+      RO(IP2) = C1*(R(IP3) - C2)
+      RO(IP3) = C1*(R(IP2) - C2)
+!
+      F(1) = 3.*(SL(2)-SL(3))/SL(1)
+      F(2) = 3.*(SL(3)-SL(1))/SL(2)
+      F(3) = 3.*(SL(1)-SL(2))/SL(3)
+!
+      G(1) = (R(2)-R(3))*PHI(1) + F(1)*RO(1) - RO(2) + RO(3)
+      G(2) = (R(3)-R(1))*PHI(2) + F(2)*RO(2) - RO(3) + RO(1)
+      G(3) = (R(1)-R(2))*PHI(3) + F(3)*RO(3) - RO(1) + RO(2)
+!
+      DO 6 I = 1,3
+        P(I) = G(I) + PHI(I)
+        Q(I) = G(I) - PHI(I)
+    6   CONTINUE
+!
+      A(1) = R(1) + G(3) - G(2)
+      A(2) = R(2) + G(1) - G(3)
+      A(3) = R(3) + G(2) - G(1)
+!
+      B(1) = U(3)*P(3) + U(2)*Q(2)
+      B(2) = U(1)*P(1) + U(3)*Q(3)
+      B(3) = U(2)*P(2) + U(1)*Q(1)
+!
+      C(1) = V(3)*P(3) + V(2)*Q(2)
+      C(2) = V(1)*P(1) + V(3)*Q(3)
+      C(3) = V(2)*P(2) + V(1)*Q(1)
+!
+! W IS A LINEAR COMBINATION OF THE CARDINAL FUNCTIONS
+!
+      W = A(1)*Z1 + A(2)*Z2 + A(3)*Z3 + (B(1)*ZX1 + B(2)*ZX2 &
+          + B(3)*ZX3 + C(1)*ZY1 + C(2)*ZY2 + C(3)*ZY3)/2.
+      IF (IFLAG .NE. 1) RETURN
+!
+! COMPUTE WX AND WY
+!
+      DO 7 I = 1,3
+        RX(I) = -V(I)/AREA
+        RY(I) = U(I)/AREA
+    7   CONTINUE
+      PHIX(1) = R(2)*RX(3) + RX(2)*R(3)
+      PHIY(1) = R(2)*RY(3) + RY(2)*R(3)
+      PHIX(2) = R(3)*RX(1) + RX(3)*R(1)
+      PHIY(2) = R(3)*RY(1) + RY(3)*R(1)
+      PHIX(3) = R(1)*RX(2) + RX(1)*R(2)
+      PHIY(3) = R(1)*RY(2) + RY(1)*R(2)
+!
+      ROX(IP1) = RX(IP1)*(PHI(IP1) + 5.*C1) + &
+                 R(IP1)*(PHIX(IP1) - RX(IP1))
+      ROY(IP1) = RY(IP1)*(PHI(IP1) + 5.*C1) + &
+                 R(IP1)*(PHIY(IP1) - RY(IP1))
+      ROX(IP2) = RX(IP1)*(PHI(IP2) - C1) + C1*RX(IP3)
+      ROY(IP2) = RY(IP1)*(PHI(IP2) - C1) + C1*RY(IP3)
+      ROX(IP3) = RX(IP1)*(PHI(IP3) - C1) + C1*RX(IP2)
+      ROY(IP3) = RY(IP1)*(PHI(IP3) - C1) + C1*RY(IP2)
+!
+      GX(1) = (RX(2) - RX(3))*PHI(1) + (R(2) - R(3))*PHIX(1) &
+              + F(1)*ROX(1) - ROX(2) + ROX(3)
+      GY(1) = (RY(2) - RY(3))*PHI(1) + (R(2) - R(3))*PHIY(1) &
+              + F(1)*ROY(1) - ROY(2) + ROY(3)
+      GX(2) = (RX(3) - RX(1))*PHI(2) + (R(3) - R(1))*PHIX(2) &
+              + F(2)*ROX(2) - ROX(3) + ROX(1)
+      GY(2) = (RY(3) - RY(1))*PHI(2) + (R(3) - R(1))*PHIY(2) &
+              + F(2)*ROY(2) - ROY(3) + ROY(1)
+      GX(3) = (RX(1) - RX(2))*PHI(3) + (R(1) - R(2))*PHIX(3) &
+              + F(3)*ROX(3) - ROX(1) + ROX(2)
+      GY(3) = (RY(1) - RY(2))*PHI(3) + (R(1) - R(2))*PHIY(3) &
+              + F(3)*ROY(3) - ROY(1) + ROY(2)
+!
+      DO 8 I = 1,3
+        PX(I) = GX(I) + PHIX(I)
+        PY(I) = GY(I) + PHIY(I)
+        QX(I) = GX(I) - PHIX(I)
+        QY(I) = GY(I) - PHIY(I)
+    8   CONTINUE
+!
+      AX(1) = RX(1) + GX(3) - GX(2)
+      AY(1) = RY(1) + GY(3) - GY(2)
+      AX(2) = RX(2) + GX(1) - GX(3)
+      AY(2) = RY(2) + GY(1) - GY(3)
+      AX(3) = RX(3) + GX(2) - GX(1)
+      AY(3) = RY(3) + GY(2) - GY(1)
+!
+      BX(1) = U(3)*PX(3) + U(2)*QX(2)
+      BY(1) = U(3)*PY(3) + U(2)*QY(2)
+      BX(2) = U(1)*PX(1) + U(3)*QX(3)
+      BY(2) = U(1)*PY(1) + U(3)*QY(3)
+      BX(3) = U(2)*PX(2) + U(1)*QX(1)
+      BY(3) = U(2)*PY(2) + U(1)*QY(1)
+!
+      CX(1) = V(3)*PX(3) + V(2)*QX(2)
+      CY(1) = V(3)*PY(3) + V(2)*QY(2)
+      CX(2) = V(1)*PX(1) + V(3)*QX(3)
+      CY(2) = V(1)*PY(1) + V(3)*QY(3)
+      CX(3) = V(2)*PX(2) + V(1)*QX(1)
+      CY(3) = V(2)*PY(2) + V(1)*QY(1)
+!
+! WX AND WY ARE LINEAR COMBINATIONS OF THE CARDINAL
+!   FUNCTIONS
+!
+      WX = AX(1)*Z1 + AX(2)*Z2 + AX(3)*Z3 + (BX(1)*ZX1 + &
+           BX(2)*ZX2 + BX(3)*ZX3 + CX(1)*ZY1 + CX(2)*ZY2 + &
+           CX(3)*ZY3)/2.
+      WY = AY(1)*Z1 + AY(2)*Z2 + AY(3)*Z3 + (BY(1)*ZX1 + &
+           BY(2)*ZX2 + BY(3)*ZX3 + CY(1)*ZY1 + CY(2)*ZY2 + &
+           CY(3)*ZY3)/2.
+      RETURN
+!
+! VERTICES ARE COLLINEAR
+!
+    9 IER = 1
+      W = 0.
+      IF (IFLAG .NE. 1) RETURN
+      WX = 0.
+      WY = 0.
+      RETURN
+      END
+
+
+
+

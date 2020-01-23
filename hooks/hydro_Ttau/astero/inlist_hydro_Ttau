@@ -1,0 +1,94 @@
+&star_job
+  ! begin with a pre-main sequence model
+    create_pre_main_sequence_model = .true.
+    pre_ms_T_c = 9d5
+
+  ! include atmospheric structure in model
+    relax_to_this_tau_factor = 2d-4
+    dlogtau_factor = 0.05d0 ! 0.1d0
+    relax_tau_factor = .true.
+
+  ! use matching opacity tables
+    kappa_file_prefix = 'gn93'
+    kappa_lowT_prefix = 'lowT_rt14_ag89'
+      
+    initial_zfracs = 2
+
+    save_model_when_terminate = .true.
+    save_model_filename = 'final.mod'
+
+    set_initial_cumulative_energy_error = .true.
+    new_cumulative_energy_error = 0d0
+    
+    pgstar_flag = .false. ! .true.
+/ !end of star_job namelist
+
+
+&controls
+      use_gold_tolerances = .true.
+      use_eosDT2 = .true. 
+      use_eosELM = .true.
+
+      use_dedt_form_of_energy_eqn = .true.
+      min_cell_energy_fraction_for_dedt_form = 1d-8
+
+      ! check for retries and backups as part of test_suite
+         max_number_backups = 0
+         max_number_retries = 5
+         max_model_number = 1200
+
+      num_trace_history_values = 2
+      trace_history_value_name(1) = 'rel_E_err'
+      trace_history_value_name(2) = 'log_rel_run_E_err'
+
+      history_interval = 10
+      profile_interval = -1
+      terminal_interval = 10
+      photo_interval = 100
+
+      x_ctrl(1) = 1.0325421374978043d0
+      atm_option = 'simple_photosphere' ! 'solar_Hopf_grey' ! photosphere_tables'     
+      MLT_option = 'ML1' ! 'Cox'
+      calculate_Brunt_N2 = .true. 
+      num_cells_for_smooth_brunt_B = 0
+      
+      cubic_interpolation_in_X = .true. ! .false.
+      cubic_interpolation_in_Z = .true. ! .false.
+
+      use_other_surface_PT = .true. ! fix for T4_tau at top of model
+      use_other_gradr_factor = .true.
+
+      T_mix_limit = 1d4 ! otherwise little bit of settling in atmosphere
+
+      max_years_for_timestep = 1d7           
+      varcontrol_target = 1d-4
+      mesh_delta_coeff = 0.5
+      
+      ! atomic diffusion
+      do_element_diffusion = .true. ! determines whether or not we do diffusion
+      diffusion_dt_limit = 7d11 ! no element diffusion if dt < this limit (in seconds)
+      diffusion_T_full_on = 1d3
+      diffusion_T_full_off = 1d3
+      
+      diffusion_calculates_ionization = .true.
+
+      diffusion_num_classes = 4 ! number of classes of species for diffusion calculations
+      diffusion_class_representative(1) = 'h1'
+      diffusion_class_representative(2) = 'he4'
+      diffusion_class_representative(3) = 'o16'
+      diffusion_class_representative(4) = 'fe56'
+   
+      ! in ascending order.  species goes into 1st class with A_max >= species A
+      diffusion_class_A_max(1) = 2
+      diffusion_class_A_max(2) = 4
+      diffusion_class_A_max(3) = 16
+      diffusion_class_A_max(4) = 10000
+
+      diffusion_class_typical_charge(1) = 1
+      diffusion_class_typical_charge(2) = 2
+      diffusion_class_typical_charge(3) = 8
+      diffusion_class_typical_charge(4) = 21
+/ ! end of controls namelist
+
+&pgstar
+/ ! end of pgstar namelist
