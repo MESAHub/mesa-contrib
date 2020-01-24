@@ -16,6 +16,8 @@ suite from SVN r10460 and subsequently moved into the `mesa-contrib`
 repo.  If you use the `hydro_Ttau` routines, please cite these
 publications.
 
+This contribution is maintained by [@warrickball](https://github.com/warrickball).
+
 ## Usage
 
 Example inlists and `run_star_extras.f` are provided for both a normal
