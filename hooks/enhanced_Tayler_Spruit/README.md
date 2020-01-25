@@ -7,6 +7,8 @@ This prescription sets `am_nu_omega`, which is the diffusivity of angular veloci
 In principle the dynamo also results in chemical mixing, but these routines do not implement that effect.
 If you use these routines please cite this publication.
 
+This contribution is maintained by @adamjermyn.
+
 ## Usage
 
 Example inlists and `run_star_extras.f` are provided for a normal

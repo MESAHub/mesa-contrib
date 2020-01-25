@@ -167,8 +167,296 @@
 
       end subroutine TSF
 
+       
+      subroutine TS_data_for_extra_history_columns(id, id_extra, n, names, vals, ierr)
+         use const_def, only: pi
+         integer, intent(in) :: id, id_extra, n
+         character (len=maxlen_history_column_name) :: names(n)
+         real(dp) :: vals(n)
+         real(dp) :: ominteg,ninteg,brunts,dr,J1,J2,J3,JHe,nu_pulse
+         integer :: j,k,op_err
+         integer, intent(out) :: ierr
+         type (star_info), pointer :: s
+         ierr = 0
+         call star_ptr(id, s, ierr)
+         if (ierr /= 0) return
+
+         op_err = 0
+
+         names(1) = 'nu_max' !Aseteroseismic nu_max
+         names(2) = 'om_g' !Core rotation as sensed by g-modes  
+         names(3) = 'AM_1' !Angular momentum in inner 0.1 Msun
+         names(4) = 'AM_2' !Angular momentum in inner 0.2 Msun
+         names(5) = 'AM_3' !Angular momentum in inner 0.3 Msun
+         names(6) = 'AM_He' !Angular momentum in helium core
+
+         vals(1) = 1d-50
+         vals(2) = 1d-50
+         vals(3) = 1d-50
+         vals(4) = 1d-50
+         vals(5) = 1d-50
+         vals(6) = 1d-50
+
+         vals(1) = s% nu_max
+         nu_pulse = s% nu_max !Set pulsation period via scaling relations
+ 
+         if (s% log_surface_radius < -1d0) then
+            nu_pulse = 1000d0 !If white dwarf, set pulsation period = 1000 microhertz
+         end if
+ 
+         ominteg=1d-99
+         ninteg=1d-50
+         J1=1d-50
+         J2=1d-50
+         J3=1d-50
+         JHe=1d-50
+
+         do k = 2, s% nz-1
+
+            if (s% brunt_N2(k) < 1d-14) brunts = 1d-14 
+            if (s% brunt_N2(k) > 1d-14) brunts = s% brunt_N2(k)
+
+            if (2d0*pi*nu_pulse/1d6<sqrt_cr(brunts)) then
+                if (2d0*pi*nu_pulse/1d6<sqrt_cr(2d0)*s% csound(k)/s% r(k)) then
+                   dr = (s% r(k+1)-s% r(k-1))/2d0
+                   ominteg = ominteg + sqrt_cr(brunts)*(dr/s% r(k))*s% omega(k)
+                    ninteg = ninteg + sqrt_cr(brunts)*(dr/s% r(k))
+                end if
+            end if
+
+            if (s% m(k)/1.99d33 < 0.1d0) then
+                J1 = J1 + (2d0/3d0)*pow2(s% r(k))*s% dm(k)*s% omega(k)
+            end if 
+
+            if (s% m(k)/1.99d33 < 0.2d0) then
+                J2 = J2 + (2d0/3d0)*pow2(s% r(k))*s% dm(k)*s% omega(k)
+            end if
+
+            if (s% m(k)/1.99d33 < 0.3d0) then
+                J3 = J3 + (2d0/3d0)*pow2(s% r(k))*s% dm(k)*s% omega(k)
+            end if  
+
+            if (s% m(k)/1.99d33 < s% he_core_mass) then
+                JHe = JHe + (2d0/3d0)*pow2(s% r(k))*s% dm(k)*s% omega(k)
+            end if 
+
+         end do
+
+         vals(2) = ominteg/ninteg
+         vals(3) = J1
+         vals(4) = J2
+         vals(5) = J3
+         vals(6) = JHe
+
+      end subroutine TS_data_for_extra_history_columns
 
 
+      subroutine TS_data_for_extra_profile_columns(id, id_extra, n, nz, names, vals, ierr)
+         use star_def, only: star_info, maxlen_profile_column_name
+         use const_def, only: dp
+         integer, intent(in) :: id, id_extra, n, nz
+         character (len=maxlen_profile_column_name) :: names(n)
+
+         real(dp) :: vals(nz,n)
+         real(dp) :: brunts,alpha,nu_tsf,nu_tsf_t,diffm,difft,omegac,omegaa,omegat,lognuomega,bruntsn2,shearsmooth
+         real(dp) :: xmagfmu, xmagft, xmagfdif, xmagfnu, &
+            xkap, xgamma, xlg, xsig1, xsig2, xsig3, xxx, ffff, xsig, &
+            xeta
+
+         integer, intent(out) :: ierr
+         type (star_info), pointer :: s
+         integer :: k,j,op_err,nsmooth,nsmootham
+         ierr = 0
+         call star_ptr(id, s, ierr)
+         if (ierr /= 0) return
+         
+         !note: do NOT add the extra names to profile_columns.list
+         ! the profile_columns.list is only for the built-in profile column options.
+         ! it must not include the new column names you are adding here.
+
+         !if (n /= 1) stop 'data_for_extra_profile_columns'
+         names(1) = 'log_N'
+         names(2) = 'q_smooth'
+         names(3) = 'nu_TSF'
+         names(4) = 'log_nu_TSF'
+         names(5) = 'diff_mag'
+         names(6) = 'log_diff_mag'
+
+         vals(:,1) = 1d-50
+         vals(:,2) = 1d-30
+         vals(:,3) = 1d-50
+         vals(:,4) = -50
+         vals(:,5) = 1d-50
+         vals(:,6) = -50
+
+         op_err = 0
+         alpha = 1d0
+         nsmooth=5
+         nsmootham=nsmooth-3     
+         do k=nsmooth+1,s% nz-(nsmooth+1)
+
+            vals(k,1) = safe_log10_cr(sqrt_cr(abs(s% brunt_N2(k))))
+            vals(k,2) = s% omega_shear(k)/(2d0*nsmooth+1d0)
+            nu_tsf=1d-30
+            nu_tsf_t=1d-30
+
+            do j=1,nsmooth
+                vals(k,2) = vals(k,2) + (1d0/(2d0*nsmooth+1d0))*( s% omega_shear(k-j) + s% omega_shear(k+j) )
+            end do
+            shearsmooth = vals(k,2)
+
+                    diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) 
+            difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k))
+            vals(k,5) = diffm
+            vals(k,6) =  safe_log10_cr(vals(k,5))
+
+            omegaa = s% omega(k)*pow_cr(shearsmooth*s% omega(k)/sqrt_cr(abs(s% brunt_N2(k))),1d0/3d0) !Alfven frequency at saturation, assuming adiabatic instability
+            omegat = difft*pow2(sqrt_cr(abs(s% brunt_N2(k)))/(s% omega(k)*s% r(k))) !Thermal damping rate assuming adiabatic instability
+            brunts = sqrt_cr(abs( s% brunt_N2_composition_term(k)&
+                +(s% brunt_N2(k)-s% brunt_N2_composition_term(k))/(1d0 + omegat/omegaa) )) !Suppress thermal part of brunt
+            bruntsn2 = sqrt_cr(abs( s% brunt_N2_composition_term(k)+&
+            (s% brunt_N2(k)-s% brunt_N2_composition_term(k))*min(1d0,diffm/difft) )) !Effective brunt for isothermal instability
+            brunts = max(brunts,bruntsn2) !Choose max between suppressed brunt and isothermal brunt
+            brunts = max(s% omega(k),brunts) !Don't let Brunt be smaller than omega
+            omegaa = s% omega(k)*pow_cr(abs(shearsmooth*s% omega(k)/brunts),1d0/3d0) !Recalculate omegaa
+
+            ! Calculate nu_TSF
+            if (s% brunt_N2(k) > 0.) then
+                if (pow2(brunts) > 2d0*pow2(vals(k,2))*pow2(s% omega(k))) then
+                    omegac = 1d0*s% omega(k)*sqrt_cr(brunts/s% omega(k))*pow_cr(diffm/(pow2(s% r(k))*s% omega(k)),0.25d0)  !Critical field strength
+                    nu_tsf = 5d-1+5d-1*tanh(5d0*log(alpha*omegaa/omegac)) !Suppress AM transport if omega_a<omega_c
+                    nu_tsf = nu_tsf*pow3(alpha)*s% omega(k)*pow2(s% r(k))*pow2(s% omega(k)/brunts) !nu_omega for revised Tayler instability
+                end if
+                ! Add TSF enabled by thermal diffusion
+                if (pow2(brunts) < 2d0*pow2(vals(k,2))*pow2(s% omega(k))) then
+                    nu_tsf_t = alpha*abs(vals(k,2))*s% omega(k)*pow2(s% r(k))
+                end if
+                vals(k,3) = max(nu_tsf,nu_tsf_t) + 1d-1
+                vals(k,4) = safe_log10_cr(vals(k,3))
+            end if
+
+         end do
+
+          do k=s% nz-nsmooth,s% nz
+
+            vals(k,1) = safe_log10_cr(sqrt_cr(abs(s% brunt_N2(k))))
+            vals(k,2) = vals(k-1,2)
+            nu_tsf=1d-30
+            nu_tsf_t=1d-30
+
+            diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) 
+            difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k))
+            vals(k,5) = diffm
+            vals(k,6) = safe_log10_cr(vals(k,5))
+
+            omegaa = s% omega(k)*pow_cr(shearsmooth*s% omega(k)/sqrt_cr(abs(s% brunt_N2(k))),1d0/3d0) !Alfven frequency at saturation, assuming adiabatic instability
+            omegat = difft*pow2(sqrt_cr(abs(s% brunt_N2(k)))/(s% omega(k)*s% r(k))) !Thermal damping rate assuming adiabatic instability
+            brunts = sqrt_cr(abs( s% brunt_N2_composition_term(k)&
+                +(s% brunt_N2(k)-s% brunt_N2_composition_term(k))/(1d0 + omegat/omegaa) )) !Suppress thermal part of brunt
+            bruntsn2 = sqrt_cr(abs( s% brunt_N2_composition_term(k)+&
+            (s% brunt_N2(k)-s% brunt_N2_composition_term(k))*min(1d0,diffm/difft) )) !Effective brunt for isothermal instability
+            brunts = max(brunts,bruntsn2) !Choose max between suppressed brunt and isothermal brunt
+            brunts = max(s% omega(k),brunts) !Don't let Brunt be smaller than omega
+            omegaa = s% omega(k)*pow_cr(abs(shearsmooth*s% omega(k)/brunts),1d0/3d0) !Recalculate omegaa
+
+            ! Calculate nu_TSF
+            if (s% brunt_N2(k) > 0.) then
+                if (pow2(brunts) > 2d0*pow2(vals(k,2))*pow2(s% omega(k))) then
+                    omegac = 1d0*s% omega(k)*sqrt_cr(brunts/s% omega(k))*pow_cr(diffm/(pow2(s% r(k))*s% omega(k)),0.25d0)  !Critical field strength
+                    nu_tsf = 5d-1+5d-1*tanh(5d0*log(alpha*omegaa/omegac)) !Suppress AM transport if omega_a<omega_c
+                    nu_tsf = nu_tsf*pow3(alpha)*s% omega(k)*pow2(s% r(k))*pow2(s% omega(k)/brunts) !nu_omega for revised Tayler instability
+                end if
+                ! Add TSF enabled by thermal diffusion
+                if (pow2(brunts) < 2d0*pow2(vals(k,2))*pow2(s% omega(k))) then
+                    nu_tsf_t = alpha*abs(vals(k,2))*s% omega(k)*pow2(s% r(k))
+                end if
+                vals(k,3) = max(nu_tsf,nu_tsf_t) + 1d-1
+                vals(k,4) = safe_log10_cr(vals(k,3))
+            end if
+
+          end do
+
+          do k=nsmooth,1
+
+            vals(k,1) = safe_log10_cr(sqrt_cr(abs(s% brunt_N2(k))))
+            vals(k,2) = vals(k+1,2)
+            nu_tsf=1d-30
+            nu_tsf_t=1d-30
+
+            diffm = diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) 
+            difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k))
+            vals(k,5) = diffm
+            vals(k,6) =  safe_log10_cr(vals(k,5))
+
+            omegaa = s% omega(k)*pow_cr(shearsmooth*s% omega(k)/sqrt_cr(abs(s% brunt_N2(k))),1d0/3d0) !Alfven frequency at saturation, assuming adiabatic instability
+            omegat = difft*pow2(sqrt_cr(abs(s% brunt_N2(k)))/(s% omega(k)*s% r(k))) !Thermal damping rate assuming adiabatic instability
+            brunts = sqrt_cr(abs( s% brunt_N2_composition_term(k)&
+                +(s% brunt_N2(k)-s% brunt_N2_composition_term(k))/(1d0 + omegat/omegaa) )) !Suppress thermal part of brunt
+            bruntsn2 = sqrt_cr(abs( s% brunt_N2_composition_term(k)+&
+            (s% brunt_N2(k)-s% brunt_N2_composition_term(k))*min(1d0,diffm/difft) )) !Effective brunt for isothermal instability
+            brunts = max(brunts,bruntsn2) !Choose max between suppressed brunt and isothermal brunt
+            brunts = max(s% omega(k),brunts) !Don't let Brunt be smaller than omega
+            omegaa = s% omega(k)*pow_cr(abs(shearsmooth*s% omega(k)/brunts),1d0/3d0) !Recalculate omegaa
+
+            ! Calculate nu_TSF
+            if (s% brunt_N2(k) > 0d0) then
+                if (pow2(brunts) > 2d0*pow2(vals(k,2))*pow2(s% omega(k))) then
+                    omegac = 1d0*s% omega(k)*sqrt_cr(brunts/s% omega(k))*pow_cr(diffm/(pow2(s% r(k))*s% omega(k)),0.25d0)  !Critical field strength
+                    nu_tsf = 5d-1+5d-1*tanh(5d0*log(alpha*omegaa/omegac)) !Suppress AM transport if omega_a<omega_c
+                    nu_tsf = nu_tsf*pow3(alpha)*s% omega(k)*pow2(s% r(k))*pow2(s% omega(k)/brunts) !nu_omega for revised Tayler instability
+                end if
+                ! Add TSF enabled by thermal diffusion
+                if (pow2(brunts) < 2d0*pow2(vals(k,2))*pow2(s% omega(k))) then
+                    nu_tsf_t = alpha*abs(vals(k,2))*s% omega(k)*pow2(s% r(k))
+                end if
+                vals(k,3) = max(nu_tsf,nu_tsf_t) + 1d-1
+                vals(k,4) = safe_log10_cr(vals(k,3))
+            end if
+          end do
+
+
+         !Smooth nu_omega
+         do k=nsmootham+1,s% nz-(nsmootham+1)
+            if (s% mixing_type(k)==1) then
+                vals(k,4) = vals(k,4)
+            else
+                vals(k,4) = vals(k,4)/(2d0*nsmootham+1d0)
+            end if          
+            do j=1,nsmootham
+                !Don't smooth convective diffusivity into non-convective zones
+                if (s% mixing_type(k-j)<3.5d0) then
+                    vals(k,4) = vals(k,4)
+                !Smooth zones if not including a convective zone
+                else 
+                    vals(k,4) = vals(k,4) + (1d0/(2d0*nsmootham+1d0))*vals(k-j,4) 
+                end if
+            end do
+            do j=1,nsmootham
+                !Don't smooth convective diffusivity into non-convective zones
+                if (s% mixing_type(k+j)<3.5d0) then
+                    vals(k,4) = vals(k,4)
+                !Smooth zones if not including a convective zone
+                else 
+                    vals(k,4) = vals(k,4) + (1d0/(2d0*nsmootham+1d0))*vals(k+j,4) 
+                end if
+            end do
+            vals(k,3) = pow_cr(10d0,vals(k,4))
+         end do
+
+          !Values near inner boundary
+         do k=s% nz-nsmootham,s% nz
+            vals(k,4) = vals(k-1,4)
+            vals(k,3) = pow_cr(10d0,vals(k,4))
+         end do
+
+          !Values near outer boundary
+         do k=nsmootham,1
+            vals(k,4) = vals(k-1,4)
+            vals(k,3) = pow_cr(10d0,vals(k,3))
+         end do
+
+
+      end subroutine TS_data_for_extra_profile_columns
 
 
 
