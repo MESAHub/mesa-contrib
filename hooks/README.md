@@ -1,8 +1,7 @@
-# ``template``
+# ``Style Suggestions``
 
 ## Overview
 
-This is a template MESA contribution.
 Routines and data can go anywhere in a contribution directory, including in subfolders.
 You just need to be sure to point to the correct locations in your `run_star_extras.f`.
 
