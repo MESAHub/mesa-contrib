@@ -102,4 +102,4 @@ If your routines follow this signature, then a user can incorporate your routine
       end subroutine data_for_extra_history_columns
 ````
 
-and similarly for profile columns. Note that for profile columns you need to explicitly slice the first index of the ``vals`` array, as in ``vals(1:s\%nz,j:j+nc)``.
+and similarly for profile columns. Note that for profile columns you need to explicitly slice the first index of the ``vals`` array, as in ``vals(1:s%nz,j:j+nc)``.
