@@ -49,65 +49,9 @@ Please document all such changes users need to make in order to use your contrib
 
 Sometimes users will want to use multiple contributions in their work.
 Each contribution might have routines for adding history and/or profile columns.
-To make it easier for users to combine these routines, we recommend a call signature of the form
-
-````Fortran
-      subroutine my_contribution_extra_history_columns(id, ierr, array, names, index, ...)
-         integer, intent(in) :: id
-         integer, intent(out) :: ierr, index
-         real(dp), dimension(:), intent(out) :: array
-         character (len=maxlen_history_column_name), dimension(:) :: names
-         type (star_info), pointer :: s
-
-         call star_ptr(id, s, ierr)
-         if (ierr /= 0) return
-
-         ! Calculate new history columns         
-         ...
-
-         ! Insert them into the array starting at index
-         array(index) = first_column
-         names(index) = 'first column'
-         array(index+1) = second_column
-         names(index+1) = 'second column'
-         ...
-
-         ! Increment index for the next routine
-         index = index + my_contribution_how_many_extra_history_columns(id)
-         
-      end subroutine my_contribution_extra_history_columns
-      
-      subroutine my_contribution_extra_profile_columns(id, ierr, array, name_array, index, ...)
-         integer, intent(in) :: id
-         integer, intent(out) :: ierr, index
-         real(dp), dimension(:,:), intent(out) :: array
-         character (len=maxlen_history_column_name), dimension(:) :: names
-         integer :: k
-         type (star_info), pointer :: s
-
-         call star_ptr(id, s, ierr)
-         if (ierr /= 0) return
-
-         ! Calculate new history columns         
-         ...
-
-         ! Insert them into the array starting at index
-         do k=1,s\%nz
-             array(k,index) = first_column(k)
-             array(k,index+1) = second_column(k)
-             ...
-         end do
-         names(index) = 'first column'
-         names(index+1) = 'second column'
-	...
-	
-         ! Increment index for the next routine
-         index = index + my_contribution_how_many_extra_profile_columns(id)
-         
-      end subroutine my_contribution_extra_profile_columns
-      
-````
-
+To make it easier for users to combine these routines, we recommend that these routines have a hook-specific name.
+That avoids namespace conflicts.
+Otherwise we recommend that these routines follow the call signature of the current methods for extra profile and history columns. 
 If your routines follow this signature, then a user can incorporate your routines alongside other contributions as follows:
 
 ````Fortran
@@ -143,12 +87,19 @@ If your routines follow this signature, then a user can incorporate your routine
          ! it must not include the new column names you are adding here.
          
          j = 1
-         call contribution1_extra_history_columns(id, ierr, vals, names, j)
-         call contribution2_extra_history_columns(id, ierr, vals, names, j)
-         call contribution3_extra_history_columns(id, ierr, vals, names, j)
+         nc = contribution1_how_many_extra_history_columns(id)
+         call contribution1_extra_history_columns(id, ierr, vals(j:j+nc), names(j:j+nc))
+
+         j = j + nc
+         nc = contribution2_how_many_extra_history_columns(id)
+         call contribution2_extra_history_columns(id, ierr, vals(j:j+nc), names(j:j+nc))
+
+         j = j + nc
+         nc = contribution3_how_many_extra_history_columns(id)
+         call contribution3_extra_history_columns(id, ierr, vals(j:j+nc), names(j:j+nc))
 	...
 	
       end subroutine data_for_extra_history_columns
 ````
 
-and similarly for profile columns.
+and similarly for profile columns. Note that for profile columns you need to explicitly slice the first index of the ``vals`` array, as in ``vals(1:s\%nz,j:j+nc)``.
