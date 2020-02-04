@@ -1,0 +1,116 @@
+! inlist to generate a standard 1 solar mass model at the deuterium burning birthline
+
+! For the sake of future readers of this file (yourself included),
+! ONLY include the controls you are actually using.  DO NOT include
+! all of the other controls that simply have their default values.
+
+&star_job
+
+    ! begin with a pre-main sequence model
+    create_pre_main_sequence_model = .true.
+
+    ! save a model at the end of the run
+    save_model_when_terminate = .true.
+    save_model_filename = 'simplesolar.model'
+
+    change_initial_net = .true. ! switch nuclear reaction network
+    new_net_name = 'pp_and_cno_extras.net'
+
+    set_rate_c12ag = 'Kunz'
+    set_rate_n14pg = 'jina reaclib'
+
+    kappa_file_prefix = 'OP_gs98'
+    kappa_lowT_prefix = 'lowT_fa05_gs98' ! for lower temperatures.
+
+    change_lnPgas_flag = .true.
+    new_lnPgas_flag = .false.
+
+    set_uniform_initial_composition = .true.
+    initial_h1 =   0.711552
+    initial_h2 = 0.0
+    initial_he3 = 0.000031
+    initial_he4 = 0.269829
+    initial_zfracs = 3
+
+    set_initial_model_number = .true.
+    initial_model_number = 0
+
+    ! save a model at the end of the run
+    save_model_when_terminate = .true.
+    save_model_filename = 'final.model'
+
+    ! Rotation
+    new_rotation_flag = .true.
+    change_rotation_flag = .true.
+    set_initial_omega = .true.
+    new_omega =  9.09025d-6
+
+    ! display on-screen plots
+    pgstar_flag = .true.
+
+/ !end of star_job namelist
+
+
+&controls
+
+    varcontrol_target = 1.0d-3 ! timestep for structural change, 10x MESA default
+
+    ! starting specifications
+    initial_mass = 1.4 ! in Msun units
+    initial_z = 0.018588
+
+    mixing_length_alpha = 1.816711
+    ! options for energy conservation (see MESA V, Section 3)
+    use_dedt_form_of_energy_eqn = .true.
+    use_gold_tolerances = .true.
+
+    max_age = 2d9
+
+    ! Control disk wind
+    use_other_torque = .true.
+    x_ctrl(1) = 3.0e6 ! disk lifetime in years
+    x_ctrl(2) = 9.090256e-6 ! disk omega in rad/s
+    x_ctrl(3) = 2.56d0 ! calibration constant for jdot
+    x_ctrl(4) = 2.86e-5 ! saturation threshold for wind in rad/s
+    x_integer_ctrl(1) = 1 ! distribute torque 1=scz 2 = whole star
+    x_integer_ctrl(2) = 3 ! 1 = kawaler 2 = sat kawaler 3 = vsp13
+
+    !  Force uniform rotation
+    set_uniform_am_nu_non_rot = .true.
+    uniform_am_nu_non_rot = 1d20
+    
+    ! atmosphere
+    which_atm_option = 'photosphere_tables'
+
+    ! atomic diffusion
+    do_element_diffusion = .false. ! determines whether or not we do diffusion
+    diffusion_dt_limit = 7d11 ! no element diffusion if dt < this limit (in seconds)
+    diffusion_T_full_on = 1d3
+    diffusion_T_full_off = 1d3
+    T_mix_limit = 3d4
+
+    diffusion_calculates_ionization = .true.
+
+    diffusion_num_classes = 4 ! number of classes of species for diffusion calculations
+    diffusion_class_representative(1) = 'h1'
+    diffusion_class_representative(2) = 'he4'
+    diffusion_class_representative(3) = 'o16'
+    diffusion_class_representative(4) = 'fe56'
+
+    ! in ascending order.  species goes into 1st class with A_max >= species A
+    diffusion_class_A_max(1) = 2
+    diffusion_class_A_max(2) = 4
+    diffusion_class_A_max(3) = 16
+    diffusion_class_A_max(4) = 10000
+
+    diffusion_use_isolve = .true.
+    diffusion_rtol_for_isolve = 1d-4
+    diffusion_atol_for_isolve = 1d-5
+    diffusion_maxsteps_for_isolve = 1000
+    diffusion_isolve_solver = 'ros2_solver'
+
+    ! Convective tau initialization
+    x_ctrl(5) = 0d0
+    x_integer_ctrl(5) = 0
+
+/ ! end of controls namelist
