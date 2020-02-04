@@ -123,8 +123,6 @@
          integer, intent(out) :: ierr
          ierr = 0
 
-         op_err = 0
-
          call TS_data_for_extra_history_columns(id, id_extra, n, names_TS, vals_TS, ierr)
 
          do k=1,6
