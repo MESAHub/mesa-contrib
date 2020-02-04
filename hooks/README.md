@@ -88,15 +88,15 @@ If your routines follow this signature, then a user can incorporate your routine
          
          j = 1
          nc = contribution1_how_many_extra_history_columns(id)
-         call contribution1_extra_history_columns(id, ierr, vals(j:j+nc), names(j:j+nc))
+         call contribution1_data_for_extra_history_columns(id, nc, names(j:j+nc), vals(j:j+nc), ierr)
 
          j = j + nc
          nc = contribution2_how_many_extra_history_columns(id)
-         call contribution2_extra_history_columns(id, ierr, vals(j:j+nc), names(j:j+nc))
+         call contribution2_data_for_extra_history_columns(id, nc, names(j:j+nc), vals(j:j+nc), ierr)
 
          j = j + nc
          nc = contribution3_how_many_extra_history_columns(id)
-         call contribution3_extra_history_columns(id, ierr, vals(j:j+nc), names(j:j+nc))
+         call contribution3_data_for_extra_history_columns(id, nc, names(j:j+nc), vals(j:j+nc), ierr)
 	...
 	
       end subroutine data_for_extra_history_columns
