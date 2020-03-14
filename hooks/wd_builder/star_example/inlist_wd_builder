@@ -1,0 +1,43 @@
+&star_job
+
+  ! build our own model
+    create_initial_model = .true.
+    initial_model_relax_num_steps = 100
+
+  ! this file can be used to specify the composition
+    relax_composition_filename = 'basic_HeCO_composition.dat'
+
+  ! net choice picks which isos are included
+    change_net = .true.
+    new_net_name = 'o18_and_ne22.net'
+
+  ! display on-screen plots
+    pgstar_flag = .true.
+
+/ !end of star_job namelist
+
+
+&controls
+
+  ! starting specifications
+    use_other_build_initial_model = .true.
+    initial_mass =  0.6 ! in Msun
+    x_ctrl(1) = 2e8 ! initial central temperature (in K)
+
+  ! opacities
+    use_type2_opacities = .true.
+    Zbase = 0.02
+
+  ! turn off burning
+    eps_nuc_factor = 0
+    dxdt_nuc_factor = 0
+
+  ! WD atm choice
+    atm_option = 'table'
+    atm_table = 'DB_WD_tau_25'
+
+  ! options for energy conservation (see MESA V, Section 3)
+     use_dedt_form_of_energy_eqn = .false.
+     use_gold_tolerances = .false.
+
+/ ! end of controls namelist
