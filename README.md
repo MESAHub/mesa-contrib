@@ -1,7 +1,7 @@
 # MESA Contributed Procedures
 
 This repo contains contributed procedures that can be used with the
-stellar evolution code [Modules for Experiments in Stellar Astrophyics
+stellar evolution code [Modules for Experiments in Stellar Astrophysics
 (MESA)](http://mesa.sourceforge.net/).
 
 Although this repo is administered by the MESA team and many of the
