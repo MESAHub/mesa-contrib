@@ -25,7 +25,7 @@
       use star_lib
       use star_def
       use const_def
-      use crlibm_lib
+      use math_lib
       
       implicit none
 
@@ -33,7 +33,7 @@
       ! these routines are called by the standard run_star check_model
       contains
       
-      include 'enhanced_Tayler_Spruit/enhanced_Tayler_Spruit_procs.inc'
+      include 'enhanced_Tayler_Spruit/enhanced_Tayler_Spruit.inc'
       !include 'standard_run_star_extras.inc'
 
       subroutine extras_controls(id, ierr)
@@ -58,9 +58,9 @@
 
       end subroutine extras_controls
 
-      integer function how_many_extra_profile_columns(id, id_extra)
+      integer function how_many_extra_profile_columns(id)
          use star_def, only: star_info
-         integer, intent(in) :: id, id_extra
+         integer, intent(in) :: id
          integer :: ierr
          type (star_info), pointer :: s
          ierr = 0
@@ -69,19 +69,19 @@
          how_many_extra_profile_columns = 6
       end function how_many_extra_profile_columns
        
-      subroutine data_for_extra_profile_columns(id, id_extra, n, nz, names, vals, ierr)
+      subroutine data_for_extra_profile_columns(id, n, nz, names, vals, ierr)
          use star_def, only: star_info, maxlen_profile_column_name
          use const_def, only: dp
-         integer, intent(in) :: id, id_extra, n, nz
+         integer, intent(in) :: id, n, nz
 
          character (len=maxlen_profile_column_name) :: names(n), names_TS(6)
          real(dp) :: vals(nz,n), vals_TS(nz,6)
 
          integer, intent(out) :: ierr
-         integer :: k
+         integer :: j, k
          ierr = 0
-         
-         call TS_data_for_extra_profile_columns(id, ierr, 6, nz, names_TS, vals_TS, ierr)
+
+         call TS_data_for_extra_profile_columns(id, 6, nz, names_TS, vals_TS, ierr)
 
          do k=1,n
              do j=1,nz
@@ -92,19 +92,8 @@
 
       end subroutine data_for_extra_profile_columns
 
-      integer function how_many_extra_profile_columns(id, id_extra)
-         use star_def, only: star_info
-         integer, intent(in) :: id, id_extra
-         integer :: ierr
-         type (star_info), pointer :: s
-         ierr = 0
-         call star_ptr(id, s, ierr)
-         if (ierr /= 0) return
-         how_many_extra_profile_columns = 6
-      end function how_many_extra_profile_columns
-
-      integer function how_many_extra_history_columns(id, id_extra)
-         integer, intent(in) :: id, id_extra
+      integer function how_many_extra_history_columns(id)
+         integer, intent(in) :: id
          integer :: ierr
          type (star_info), pointer :: s
          ierr = 0
@@ -114,16 +103,16 @@
       end function how_many_extra_history_columns
       
       
-      subroutine data_for_extra_history_columns(id, id_extra, n, names, vals, ierr)
+      subroutine data_for_extra_history_columns(id, n, names, vals, ierr)
          use const_def, only: pi
-         integer, intent(in) :: id, id_extra, n
+         integer, intent(in) :: id, n
          character (len=maxlen_history_column_name) :: names(n), names_TS(6)
          real(dp) :: vals(n), vals_TS(6)
          integer :: k
          integer, intent(out) :: ierr
          ierr = 0
 
-         call TS_data_for_extra_history_columns(id, id_extra, n, names_TS, vals_TS, ierr)
+         call TS_data_for_extra_history_columns(id, n, names_TS, vals_TS, ierr)
 
          do k=1,6
             names(k) = names_TS(k)
@@ -138,7 +127,7 @@
       ! function point in extras_control.
       
       
-      integer function extras_startup(id, restart, ierr)
+      subroutine extras_startup(id, restart, ierr)
          integer, intent(in) :: id
          logical, intent(in) :: restart
          integer, intent(out) :: ierr
@@ -146,18 +135,12 @@
          ierr = 0
          call star_ptr(id, s, ierr)
          if (ierr /= 0) return
-         extras_startup = 0
-         if (.not. restart) then
-            call alloc_extra_info(s)
-         else ! it is a restart
-            call unpack_extra_info(s)
-         end if
-      end function extras_startup
+      end subroutine extras_startup
       
 
       ! returns either keep_going, retry, backup, or terminate.
-      integer function extras_check_model(id, id_extra)
-         integer, intent(in) :: id, id_extra
+      integer function extras_check_model(id)
+         integer, intent(in) :: id
          integer :: ierr
          type (star_info), pointer :: s
          ierr = 0
@@ -189,15 +172,14 @@
 
       ! returns either keep_going or terminate.
       ! note: cannot request retry or backup; extras_check_model can do that.
-      integer function extras_finish_step(id, id_extra)
-         integer, intent(in) :: id, id_extra
+      integer function extras_finish_step(id)
+         integer, intent(in) :: id
          integer :: ierr
          type (star_info), pointer :: s
          ierr = 0
          call star_ptr(id, s, ierr)
          if (ierr /= 0) return
          extras_finish_step = keep_going
-         call store_extra_info(s)
 
          ! to save a profile, 
             ! s% need_to_save_profiles_now = .true.
@@ -210,118 +192,14 @@
       end function extras_finish_step
       
       
-      subroutine extras_after_evolve(id, id_extra, ierr)
-         integer, intent(in) :: id, id_extra
+      subroutine extras_after_evolve(id, ierr)
+         integer, intent(in) :: id
          integer, intent(out) :: ierr
          type (star_info), pointer :: s
          ierr = 0
          call star_ptr(id, s, ierr)
          if (ierr /= 0) return
       end subroutine extras_after_evolve
-      
-      
-      ! routines for saving and restoring extra data so can do restarts
-         
-      ! put these defs at the top and delete from the following routines
-      !integer, parameter :: extra_info_alloc = 1
-      !integer, parameter :: extra_info_get = 2
-      !integer, parameter :: extra_info_put = 3
-      
-      
-      subroutine alloc_extra_info(s)
-         integer, parameter :: extra_info_alloc = 1
-         type (star_info), pointer :: s
-         call move_extra_info(s,extra_info_alloc)
-      end subroutine alloc_extra_info
-      
-      
-      subroutine unpack_extra_info(s)
-         integer, parameter :: extra_info_get = 2
-         type (star_info), pointer :: s
-         call move_extra_info(s,extra_info_get)
-      end subroutine unpack_extra_info
-      
-      
-      subroutine store_extra_info(s)
-         integer, parameter :: extra_info_put = 3
-         type (star_info), pointer :: s
-         call move_extra_info(s,extra_info_put)
-      end subroutine store_extra_info
-      
-      
-      subroutine move_extra_info(s,op)
-         integer, parameter :: extra_info_alloc = 1
-         integer, parameter :: extra_info_get = 2
-         integer, parameter :: extra_info_put = 3
-         type (star_info), pointer :: s
-         integer, intent(in) :: op
-         
-         integer :: i, j, num_ints, num_dbls, ierr
-         
-         i = 0
-         ! call move_int or move_flg    
-         num_ints = i
-         
-         i = 0
-         ! call move_dbl       
-         
-         num_dbls = i
-         
-         if (op /= extra_info_alloc) return
-         if (num_ints == 0 .and. num_dbls == 0) return
-         
-         ierr = 0
-         call star_alloc_extras(s% id, num_ints, num_dbls, ierr)
-         if (ierr /= 0) then
-            write(*,*) 'failed in star_alloc_extras'
-            write(*,*) 'alloc_extras num_ints', num_ints
-            write(*,*) 'alloc_extras num_dbls', num_dbls
-            stop 1
-         end if
-         
-         contains
-         
-         subroutine move_dbl(dbl)
-            real(dp) :: dbl
-            i = i+1
-            select case (op)
-            case (extra_info_get)
-               dbl = s% extra_work(i)
-               !dbl = s% xtra1_array(i)
-            case (extra_info_put)
-               s% extra_work(i) = dbl
-           !s% xtra1_array(i) = dbl
-            end select
-         end subroutine move_dbl
-         
-         subroutine move_int(int)
-            integer :: int
-            i = i+1
-            select case (op)
-            case (extra_info_get)
-               int = s% extra_iwork(i)
-            case (extra_info_put)
-               s% extra_iwork(i) = int
-            end select
-         end subroutine move_int
-         
-         subroutine move_flg(flg)
-            logical :: flg
-            i = i+1
-            select case (op)
-            case (extra_info_get)
-               flg = (s% extra_iwork(i) /= 0)
-            case (extra_info_put)
-               if (flg) then
-                  s% extra_iwork(i) = 1
-               else
-                  s% extra_iwork(i) = 0
-               end if
-            end select
-         end subroutine move_flg
-      
-      end subroutine move_extra_info
-
 
       end module run_star_extras
       
