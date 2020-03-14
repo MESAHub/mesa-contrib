@@ -1,5 +1,5 @@
       subroutine low_mass_torques(id, ierr)
-         use crlibm_lib
+         use math_lib
          integer, intent(in) :: id
          integer, intent(out) :: ierr
          type (star_info), pointer :: s
@@ -25,9 +25,9 @@
          else if (Jdot_option == 3) then
             solar_photosphere_p = 1.12612d5
             solar_tcz = 1.09d6
-            jdot = s% x_ctrl(3) * 5.557d46 * pow_cr(s%r(1) / Rsun, 3d0) * pow_cr(s%m(1) / Msun, -0.22d0) ! True solar torque of 1.3e30 divided by omega_sun^3
-            jdot = jdot * pow_cr(s%L(1) / Lsun, 0.56d0)
-            jdot = jdot * pow_cr(photosphere_pressure(id) / solar_photosphere_p, 0.44d0)
+            jdot = s% x_ctrl(3) * 5.557d46 * pow(s%r(1) / Rsun, 3d0) * pow(s%m(1) / Msun, -0.22d0) ! True solar torque of 1.3e30 divided by omega_sun^3
+            jdot = jdot * pow(s%L(1) / Lsun, 0.56d0)
+            jdot = jdot * pow(photosphere_pressure(id) / solar_photosphere_p, 0.44d0)
             jdot = jdot * s%omega(1) * pow2(min(s%omega(1) * s% x_ctrl(5) / solar_tcz, s% x_ctrl(4)))
          end if
 
