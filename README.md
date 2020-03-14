@@ -27,7 +27,7 @@ variable `MESA_CONTRIB_DIR` to point there. e.g.
 
 Then, `$MESA_CONTRIB_DIR/hooks` will be added to the include path when
 compiling a MESA `work` folder.  Use your chosen routine by adding an
-`include` statements after `contains` in your `run_star_extras.f`. e.g.
+`include` statements after `contains` in your `run_star_extras.f90`. e.g.
 to use `hooks/other_wind_grafener.f90`, you would add something like
 
     ...

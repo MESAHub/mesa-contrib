@@ -3,7 +3,7 @@
 ## Overview
 
 Routines and data can go anywhere in a contribution directory, including in subfolders.
-You just need to be sure to point to the correct locations in your `run_star_extras.f`.
+You just need to be sure to point to the correct locations in your `run_star_extras.f90`.
 
 Please include
 ``
@@ -16,8 +16,8 @@ in your `README.md` so that your contribution has a contact and known maintainer
 It is helpful to include example directories showing how your contribution is used.
 Depending on which parts of MESA your contribution touches you may want to include examples for the star, rsp, and/or astero modules.
 
-Typically an example directory contains whatever inlists are needed as well as a `src` directory containing the sample `run_star_extras.f`.
-In your `run_star_extras.f`, around the `contains` statement you'll need
+Typically an example directory contains whatever inlists are needed as well as a `src` directory containing the sample `run_star_extras.f90`.
+In your `run_star_extras.f90`, around the `contains` statement you'll need
 
 ````Fortran
       include 'contribution_directory/any_data_to_include.inc'

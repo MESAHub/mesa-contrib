@@ -20,7 +20,7 @@ This contribution is maintained by [@warrickball](https://github.com/warrickball
 
 ## Usage
 
-Example inlists and `run_star_extras.f` are provided for both a normal
+Example inlists and `run_star_extras.f90` are provided for both a normal
 MESA `star` run and run with the `astero` submodule in the
 corresponding subfolders.  These are in essence the same inlists that
 were used the old test cases `hydro_Ttau_evolve` and
@@ -32,7 +32,7 @@ parameters will have changed as MESA developed.
 
 To use the `hydro_Ttau` relations, you need to include the definitions
 in `hydro_Ttau_def.inc` and procedures in `hydro_Ttau_procs.inc` and
-`624.dek` in the usual way. i.e. in your `run_star_extras.f`, around
+`624.dek` in the usual way. i.e. in your `run_star_extras.f90`, around
 the `contains` statement you'll need
 
 ````Fortran

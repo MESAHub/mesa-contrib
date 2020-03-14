@@ -16,7 +16,7 @@
 #
 #       include `cmd_line_args.inc`
 #
-# after the call to `star_ptr` in your `run_star_extras.f`.  In your
+# after the call to `star_ptr` in your `run_star_extras.f90`.  In your
 # work folder, run `./clean` and `./mk` and then run MESA with, e.g.
 #
 #     $ ./star inlist --initial-mass 2.0

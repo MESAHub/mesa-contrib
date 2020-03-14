@@ -11,12 +11,12 @@ This contribution is maintained by @adamjermyn.
 
 ## Usage
 
-Example inlists and `run_star_extras.f` are provided for a normal
+Example inlists and `run_star_extras.f90` are provided for a normal
 MESA `star` run in the `star_example` subfolder. These are the same
 as those appearing in the [Zenodo](https://zenodo.org/record/3228403#.XinEzi3MzUI) entry for [Fuller et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019MNRAS.485.3661F/abstract),
 but with the relevant subroutines split into `enhanced_Tayler_Spruit.inc`.
 
-To use these routines you need to include them in your `run_star_extras.f`, after
+To use these routines you need to include them in your `run_star_extras.f90`, after
 the `contains` statement you'll need
 
 ````Fortran
@@ -36,4 +36,4 @@ In `extras_controls` point you also need
       end subroutine extras_controls
 ````
 
-Note that `star_example/run_star_extras.f` includes routines for adding extra history and profile columns which may be of interest.
+Note that `star_example/run_star_extras.f90` includes routines for adding extra history and profile columns which may be of interest.
