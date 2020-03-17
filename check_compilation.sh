@@ -8,7 +8,7 @@ do_one(){
 
     (
         # go there
-        cd "${MESA_WORK_DIR}"
+        cd "${MESA_WORK_DIR}" || exit
 
         # copy in files from stock workdir
         cp -r "${MESA_DIR}"/star/work/* .
@@ -17,10 +17,14 @@ do_one(){
         cp "${MESA_CONTRIB_DIR}"/"$1"/star_example/src/* src/
 
         # try and make it
-        if ./mk > mk.out; then
-            echo "  [OK]"
+        if ./mk > mk.out 2> mk.err; then
+            if [ -s 'mk.err' ]; then
+                echo "[WARN]"
+            else
+                echo "[OK]"
+            fi
         else
-            echo "  [FAIL]"
+            echo "[FAIL]"
         fi
     ) 
     
@@ -28,10 +32,9 @@ do_one(){
     rm -rf "${MESA_WORK_DIR}"
 }
 
+echo
 for d in hooks/*/ ; do
-    echo
-    echo "****"
-    echo "checking $d"
+    echo "checking ${d%/}"
     do_one "$d"
     echo
 done
