@@ -20,16 +20,20 @@ do_one(){
         if ./mk > mk.out 2> mk.err; then
             if [ -s 'mk.err' ]; then
                 echo "[WARN]"
+                echo "see $MESA_WORK_DIR for details"
+                exit
             else
                 echo "[OK]"
+                # cleanup
+                rm -rf "${MESA_WORK_DIR}"
             fi
         else
             echo "[FAIL]"
+            echo "see $MESA_WORK_DIR for details"
+            exit
         fi
     ) 
     
-    # cleanup
-    rm -rf "${MESA_WORK_DIR}"
 }
 
 echo
