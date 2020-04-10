@@ -121,7 +121,6 @@ subroutine wd_builder(id, ierr)
   ! overwritten during the call to allocate_star_info_arrays
 
   if (ASSOCIATED(s% xh_old)) deallocate(s% xh_old)
-  if (ASSOCIATED(s% xh_older)) deallocate(s% xh_older)
   if (ASSOCIATED(s% equ1)) deallocate(s% equ1)
   if (ASSOCIATED(s% xh_pre)) deallocate(s% xh_pre)
 
@@ -294,7 +293,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   call set_composition_info
 
   call star_get_eos( &
-       s, 0, z, x, abar, zbar, xa, &
+       s% id, 0, z, x, abar, zbar, xa, &
        rho_c, log10(rho_c), T_c, log10(T_c), &
        res, d_eos_dlnd, d_eos_dlnT, &
        d_eos_dabar, d_eos_dzbar, ierr)
@@ -324,7 +323,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   ! density at nz
   logRho_guess = log10(rho_c)
   call star_solve_eos_given_PgasT( &
-       s, 0, z, xa(s% net_iso(ih1)), abar, zbar, xa, &
+       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, xa, &
        lnT/ln10, log10(Pgas), logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
        logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
        ierr)
@@ -470,7 +469,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
            logRho_guess = logRho
            call star_solve_eos_given_PgasT( &
-                s, 0, z, x, abar, zbar, xa, &
+                s% id, 0, z, x, abar, zbar, xa, &
                 lnT/ln10, logPgas, logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
                 logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
                 ierr)
