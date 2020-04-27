@@ -122,7 +122,7 @@ subroutine wd_builder(id, ierr)
 
   if (ASSOCIATED(s% xh_old)) deallocate(s% xh_old)
   if (ASSOCIATED(s% equ1)) deallocate(s% equ1)
-  if (ASSOCIATED(s% xh_pre)) deallocate(s% xh_pre)
+  if (ASSOCIATED(s% xh_start)) deallocate(s% xh_start)
 
   call star_allocate_arrays(id, ierr)
   if (ierr /= 0) then
