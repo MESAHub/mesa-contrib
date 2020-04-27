@@ -224,7 +224,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   use eos_lib, only: Radiation_Pressure
   type (star_info), pointer :: s
   real(dp), intent(in) :: T_c, rho_c, L_core
-  real(dp) :: x, z, abar, zbar
+  real(dp) :: x, z, abar, zbar, z53bar
   real(dp), allocatable :: xa(:)
   integer, intent(out) :: nz
   real(dp), intent(out) :: mstar ! the mass of the constructed model
@@ -293,7 +293,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   call set_composition_info
 
   call star_get_eos( &
-       s% id, 0, z, x, abar, zbar, xa, &
+       s% id, 0, z, x, abar, zbar, z53bar, xa, &
        rho_c, log10(rho_c), T_c, log10(T_c), &
        res, d_eos_dlnd, d_eos_dlnT, &
        d_eos_dabar, d_eos_dzbar, ierr)
@@ -323,7 +323,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   ! density at nz
   logRho_guess = log10(rho_c)
   call star_solve_eos_given_PgasT( &
-       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, xa, &
+       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, z53bar, xa, &
        lnT/ln10, log10(Pgas), logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
        logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
        ierr)
@@ -469,7 +469,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
            logRho_guess = logRho
            call star_solve_eos_given_PgasT( &
-                s% id, 0, z, x, abar, zbar, xa, &
+                s% id, 0, z, x, abar, zbar, z53bar, xa, &
                 lnT/ln10, logPgas, logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
                 logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
                 ierr)
@@ -550,7 +550,7 @@ contains
   subroutine set_composition_info
 
     call basic_composition_info( &
-         s% species, s% chem_id, xa, x, y, z, abar, zbar, z2bar, ye, &
+         s% species, s% chem_id, xa, x, y, z, abar, zbar, z53bar, z2bar, ye, &
          mass_correction, sumx)
 
     xc = xa(s% net_iso(ic12))
