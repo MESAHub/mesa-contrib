@@ -2,11 +2,16 @@
 
 export MESA_CONTRIB_DIR=$(pwd)
 
+# make tmpdir for testing
+MESA_WORK_DIR_BASE=$(mktemp -d)
+
 do_one(){
-    # make workdir for testing
-    MESA_WORK_DIR=$(mktemp -d)
 
     (
+        # set MESA_WORK_DIR
+        MESA_WORK_DIR="${MESA_WORK_DIR_BASE}/$1"
+        mkdir -p "${MESA_WORK_DIR}"
+
         # go there
         cd "${MESA_WORK_DIR}" || exit
 
