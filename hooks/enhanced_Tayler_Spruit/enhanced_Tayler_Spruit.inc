@@ -161,7 +161,7 @@
       end do
 
       !Values near outer boundary
-      do k=nsmootham,1
+      do k=nsmootham,1,-1
             s% am_nu_omega(k) = s% am_nu_omega(k-1)
       end do
 
@@ -452,7 +452,7 @@
           !Values near outer boundary
          do k=nsmootham,1,-1
             vals(k,4) = vals(k+1,4)
-            vals(k,3) = pow(10d0,vals(k,3))
+            vals(k,3) = pow(10d0,vals(k,4))
          end do
 
 
