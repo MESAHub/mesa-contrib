@@ -450,8 +450,8 @@
          end do
 
           !Values near outer boundary
-         do k=nsmootham,1
-            vals(k,4) = vals(k-1,4)
+         do k=nsmootham,1,-1
+            vals(k,4) = vals(k+1,4)
             vals(k,3) = pow(10d0,vals(k,3))
          end do
 
