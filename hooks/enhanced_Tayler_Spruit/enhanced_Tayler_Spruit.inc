@@ -162,7 +162,7 @@
 
       !Values near outer boundary
       do k=nsmootham,1,-1
-            s% am_nu_omega(k) = s% am_nu_omega(k-1)
+            s% am_nu_omega(k) = s% am_nu_omega(k+1)
       end do
 
       end subroutine TSF
