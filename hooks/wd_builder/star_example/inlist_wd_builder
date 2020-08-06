@@ -14,19 +14,26 @@
   ! display on-screen plots
     pgstar_flag = .true.
 
-/ !end of star_job namelist
+/ ! end of star_job namelist
 
+&eos
+
+/ ! end of eos namelist
+
+&kap
+
+  ! opacities
+    use_type2_opacities = .true.
+    Zbase = 0.02
+
+/ ! end of kap namelist
 
 &controls
 
   ! starting specifications
     use_other_build_initial_model = .true.
     initial_mass =  0.6 ! in Msun
-    x_ctrl(1) = 2e8 ! initial central temperature (in K)
-
-  ! opacities
-    use_type2_opacities = .true.
-    Zbase = 0.02
+    x_ctrl(1) = 2e8
 
   ! turn off burning
     eps_nuc_factor = 0

@@ -248,9 +248,10 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
        grada0, grada_mid, mmid, Tmid, Lmid, &
        chiRho, chiT, Cp, grada, gradT, logT_surf_limit, logP_surf_limit
   real(dp), pointer :: xh(:,:), q(:), dq(:) ! model structure info
+  real(dp), allocatable :: d_eos_dxa(:,:)
 
   real(dp) :: opacity, kap_cond, kap_rad, dlnkap_dlnd, dlnkap_dlnT, frac_Type2
-  real(dp) :: Zbase, XC, XN, XO, XNe
+  real(dp) :: XC, XN, XO, XNe
 
   real(dp) :: z2bar, ye, mass_correction, sumx
   integer :: species
@@ -287,16 +288,16 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   cgrav = standard_cgrav
 
   allocate(xa(s% species))
+  allocate(d_eos_dxa(num_eos_basic_results, s% species))
 
   call wd_builder_get_xa(s, 0d0, xa)
 
   call set_composition_info
 
   call star_get_eos( &
-       s% id, 0, z, x, abar, zbar, z53bar, xa, &
+       s% id, 0, xa, &
        rho_c, log10(rho_c), T_c, log10(T_c), &
-       res, d_eos_dlnd, d_eos_dlnT, &
-       d_eos_dabar, d_eos_dzbar, ierr)
+       res, d_eos_dlnd, d_eos_dlnT, d_eos_dxa, ierr)
   if (ierr /= 0) then
      write(*,*) 'failed in get_eos'
      return
@@ -338,7 +339,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   L = L_core * (m/mstar)
 
   call kap_get( &
-       s% kap_handle, zbar, X, Z, Zbase, XC, XN, XO, XNe, log10(rho), log10(T), &
+       s% kap_handle, zbar, X, Z, XC, XN, XO, XNe, log10(rho), log10(T), &
        lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
        frac_Type2, opacity, dlnkap_dlnd, dlnkap_dlnT, ierr)
 
@@ -435,7 +436,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
               call set_composition_info
 
               call kap_get( &
-                   s% kap_handle, zbar, X, Z, Zbase, XC, XN, XO, XNe, log10(rho_mid), log10(Tmid), &
+                   s% kap_handle, zbar, X, Z, XC, XN, XO, XNe, log10(rho_mid), log10(Tmid), &
                    lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
                    frac_Type2, opacity, dlnkap_dlnd, dlnkap_dlnT, ierr)
               if (ierr /= 0) then
@@ -557,7 +558,6 @@ contains
     xn = xa(s% net_iso(in14))
     xo = xa(s% net_iso(io16))
     xne = xa(s% net_iso(ine20))
-    Zbase = s% Zbase
 
   end subroutine set_composition_info
 
@@ -592,7 +592,7 @@ subroutine eval_gradT( &
   real(dp), intent(out) :: gradT
   integer, intent(out) :: ierr
 
-  real(dp) :: Z, Zbase, XC, XN, XO, XNe, frac_Type2
+  real(dp) :: Z, XC, XN, XO, XNe, frac_Type2
 
   real(dp) :: &
        cgrav, Cv, csound, &
@@ -602,7 +602,7 @@ subroutine eval_gradT( &
   real(dp), target :: mlt_partials1_ary(num_mlt_partials*num_mlt_results)
   real(dp), pointer :: mlt_partials1(:), mlt_partials(:,:)
   real(dp), parameter :: alpha_semiconvection = 0, thermohaline_coeff = 0, &
-       gradr_factor = 1
+       gradr_factor = 1, d_gradr_factor_dw = 0
   real(dp) :: alfa, beta, &
        normal_mlt_gradT_factor, &
        T_00, T_m1, rho_00, rho_m1, P_00, P_m1, &
@@ -669,7 +669,7 @@ subroutine eval_gradT( &
        grada_00, d_grada_00_dlnd, d_grada_00_dlnT, &
        grada_m1, d_grada_m1_dlnd, d_grada_m1_dlnT, &
 
-       gradr_factor, gradL_composition_term, &
+       gradr_factor, d_gradr_factor_dw, gradL_composition_term, &
        alpha_semiconvection, s% semiconvection_option, &
        thermohaline_coeff, s% thermohaline_option, ih1, &
        s% mixing_length_alpha, s% alt_scale_height_flag, s% remove_small_D_limit, &
