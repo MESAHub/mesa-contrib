@@ -1,0 +1,6 @@
+&pgstar
+  ! see star/defaults/pgstar.defaults
+
+grid6_win_flag = .true.
+
+/ ! end of pgstar namelist
