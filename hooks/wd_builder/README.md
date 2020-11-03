@@ -9,7 +9,7 @@ a radiative envelope.  The initial model is not in thermal equilibrium
 and so there is an initial transient phase lasting a few thermal times
 that should be disregarded.
 
-This contribution is maintained by @jschwab.
+This contribution is maintained by Josiah Schwab (@jschwab).
 
 ## Usage
 
