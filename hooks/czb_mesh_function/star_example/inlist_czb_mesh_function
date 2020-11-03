@@ -1,0 +1,9 @@
+&czb_mesh_function
+
+  czb_mesh_zone_type(1) = 'any'
+  czb_mesh_zone_loc(1) = 'any'
+  czb_mesh_bdy_loc(1) = 'bottom'
+  czb_mesh_f(1) = 0.005
+  czb_mesh_l(1) = 0.05
+      
+/ ! end of czb_mesh_function
