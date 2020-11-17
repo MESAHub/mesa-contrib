@@ -288,7 +288,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   cgrav = standard_cgrav
 
   allocate(xa(s% species))
-  allocate(d_eos_dxa(num_eos_basic_results, s% species))
+  allocate(d_eos_dxa(num_eos_d_dxa_results, s% species))
 
   call wd_builder_get_xa(s, 0d0, xa)
 
@@ -324,7 +324,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   ! density at nz
   logRho_guess = log10(rho_c)
   call star_solve_eos_given_PgasT( &
-       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, z53bar, xa, &
+       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, xa, &
        lnT/ln10, log10(Pgas), logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
        logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
        ierr)
@@ -470,7 +470,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
            logRho_guess = logRho
            call star_solve_eos_given_PgasT( &
-                s% id, 0, z, x, abar, zbar, z53bar, xa, &
+                s% id, 0, z, x, abar, zbar, xa, &
                 lnT/ln10, logPgas, logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
                 logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
                 ierr)
