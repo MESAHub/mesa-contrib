@@ -1,4 +1,4 @@
-# ``Style Suggestions``
+# Style suggestions
 
 ## Overview
 
@@ -13,13 +13,13 @@ in your `README.md` so that your contribution has a contact and known maintainer
 
 ## Usage
 
-It is helpful to include example directories showing how your contribution is used.
+It helps to include example directories showing how your contribution is used.
 Depending on which parts of MESA your contribution touches you may want to include examples for the star, rsp, and/or astero modules.
 
 Typically an example directory contains whatever inlists are needed as well as a `src` directory containing the sample `run_star_extras.f90`.
 In your `run_star_extras.f90`, around the `contains` statement you'll need
 
-````Fortran
+````f90
       include 'contribution_directory/any_data_to_include.inc'
 
       contains
@@ -32,7 +32,7 @@ If you have chosen to put your routines and data in subfolders, just amend the p
 
 Also, if your contribution makes use of any MESA hooks you'll need to point those hooks in extras_controls:
 
-````Fortran
+````f90
       subroutine extras_controls(id, ierr)
          ...
          call hydro_Ttau_setup(id, ierr)
@@ -54,7 +54,7 @@ That avoids namespace conflicts.
 Otherwise we recommend that these routines follow the call signature of the current methods for extra profile and history columns. 
 If your routines follow this signature, then a user can incorporate your routines alongside other contributions as follows:
 
-````Fortran
+````f90
       integer function how_many_extra_history_columns(id)
          integer, intent(in) :: id
          integer :: ierr

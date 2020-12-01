@@ -18,10 +18,10 @@ publication(s) when using that procedure.
 
 ## Usage
 
-The `contrib` repo can be used with the current development version of
-MESA (support was added in r12477-9) by checking out this repo to some
-directory (e.g. `$HOME/mesa-contrib`) and setting the environment
-variable `MESA_CONTRIB_DIR` to point there. e.g.
+The `contrib` repo can be used with any version of MESA after r12479
+by checking out this repo to some
+directory (e.g. `$HOME/mesa-contrib`) and pointing the environment
+variable `MESA_CONTRIB_DIR` there. e.g.
 
     export MESA_CONTRIB_DIR=$HOME/mesa-contrib
 
@@ -30,6 +30,7 @@ compiling a MESA `work` folder.  Use your chosen routine by adding an
 `include` statements after `contains` in your `run_star_extras.f90`. e.g.
 to use `hooks/other_wind_grafener.f90`, you would add something like
 
+````f90
     ...
     contains
    
@@ -38,3 +39,4 @@ to use `hooks/other_wind_grafener.f90`, you would add something like
     subroutine extras_controls(id, ierr)
        integer, intent(in) :: id
     ...
+````
