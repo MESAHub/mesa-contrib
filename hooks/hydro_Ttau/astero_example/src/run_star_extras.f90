@@ -38,6 +38,7 @@
       include 'hydro_Ttau/hydro_Ttau_proc.inc'
       
       subroutine extras_controls(id, ierr)
+         use astero_def, only: star_astero_procs
          integer, intent(in) :: id
          integer, intent(out) :: ierr
          type (star_info), pointer :: s
@@ -60,11 +61,18 @@
          s% data_for_extra_history_columns => data_for_extra_history_columns
          s% how_many_extra_profile_columns => how_many_extra_profile_columns
          s% data_for_extra_profile_columns => data_for_extra_profile_columns  
+
+         s% how_many_extra_history_header_items => how_many_extra_history_header_items
+         s% data_for_extra_history_header_items => data_for_extra_history_header_items
+         s% how_many_extra_profile_header_items => how_many_extra_profile_header_items
+         s% data_for_extra_profile_header_items => data_for_extra_profile_header_items
+
          s% other_gradr_factor => hydro_Ttau_gradr_factor
          s% other_surface_PT => hydro_Ttau_surface_PT
          
          s% job% warn_run_star_extras =.false.       
             
+         include 'set_star_astero_procs.inc'
       end subroutine extras_controls
       
       
@@ -78,13 +86,14 @@
          if (ierr /= 0) return
 
          call hydro_Ttau_update(id, ierr)
+         if (ierr /= 0) call mesa_error(__FILE__, __LINE__)
 
       end subroutine extras_startup
       
 
       ! returns either keep_going, retry, backup, or terminate.
       integer function extras_check_model(id)
-         use astero_data, only: my_var1, my_var2, my_var3
+         use astero_def, only: my_var1, my_var2, my_var3
          integer, intent(in) :: id
          integer :: ierr
          type (star_info), pointer :: s
@@ -95,7 +104,8 @@
          call star_ptr(id, s, ierr)
          if (ierr /= 0) return
 
-	 call hydro_Ttau_update(id, ierr)
+         call hydro_Ttau_update(id, ierr)
+         if (ierr /= 0) call mesa_error(__FILE__, __LINE__)
 
          extras_check_model = keep_going
          
@@ -116,21 +126,40 @@
       end function extras_check_model
 
 
-      subroutine set_my_param(s, i, new_value)
+      subroutine set_my_vars(id, ierr) ! called from star_astero code
+         !use astero_search_data, only: include_my_var1_in_chi2, my_var1
+         integer, intent(in) :: id
+         integer, intent(out) :: ierr
          type (star_info), pointer :: s
+         ! my_var's are predefined in the simplex_search_data.
+         ! this routine's job is to assign those variables to current value in the model.
+         ! it is called whenever a new value of chi2 is calculated.
+         ! only necessary to set the my_var's you are actually using.
+         ierr = 0
+         !if (include_my_var1_in_chi2) then
+            call star_ptr(id, s, ierr)
+            if (ierr /= 0) return
+            !my_var1 = s% Teff
+         !end if
+      end subroutine set_my_vars
+
+
+      subroutine will_set_my_param(id, i, new_value, ierr) ! called from star_astero code
+         !use astero_search_data, only: vary_my_param1
+         integer, intent(in) :: id
          integer, intent(in) :: i ! which of my_param's will be set
          real(dp), intent(in) :: new_value
-         include 'formats'
-         ! old value has not yet been changed.
-         ! do whatever is necessary for this new value.
-         ! i.e. change whatever mesa params you need to adjust.
-         ! for example, my_param1 is mass
+         integer, intent(out) :: ierr
+         type (star_info), pointer :: s
+         ierr = 0
+
          if (i == 1) then
-            s% job% new_mass = new_value
+            call star_ptr(id, s, ierr)
+            if (ierr /= 0) return
+            s% x_ctrl(1) = new_value
          end if
-         
-      end subroutine set_my_param
-       
+
+      end subroutine will_set_my_param
 
 
       integer function how_many_extra_history_columns(id)
@@ -189,6 +218,65 @@
          !end do
          
       end subroutine data_for_extra_profile_columns
+
+
+      integer function how_many_extra_history_header_items(id)
+         integer, intent(in) :: id
+         integer :: ierr
+         type (star_info), pointer :: s
+         ierr = 0
+         call star_ptr(id, s, ierr)
+         if (ierr /= 0) return
+         how_many_extra_history_header_items = 0
+      end function how_many_extra_history_header_items
+
+
+      subroutine data_for_extra_history_header_items(id, n, names, vals, ierr)
+         integer, intent(in) :: id, n
+         character (len=maxlen_history_column_name) :: names(n)
+         real(dp) :: vals(n)
+         type(star_info), pointer :: s
+         integer, intent(out) :: ierr
+         ierr = 0
+         call star_ptr(id,s,ierr)
+         if(ierr/=0) return
+
+         ! here is an example for adding an extra history header item
+         ! also set how_many_extra_history_header_items
+         ! names(1) = 'mixing_length_alpha'
+         ! vals(1) = s% mixing_length_alpha
+
+      end subroutine data_for_extra_history_header_items
+
+
+      integer function how_many_extra_profile_header_items(id)
+         integer, intent(in) :: id
+         integer :: ierr
+         type (star_info), pointer :: s
+         ierr = 0
+         call star_ptr(id, s, ierr)
+         if (ierr /= 0) return
+         how_many_extra_profile_header_items = 2
+      end function how_many_extra_profile_header_items
+
+
+      subroutine data_for_extra_profile_header_items(id, n, names, vals, ierr)
+         integer, intent(in) :: id, n
+         character (len=maxlen_profile_column_name) :: names(n)
+         real(dp) :: vals(n)
+         type(star_info), pointer :: s
+         integer, intent(out) :: ierr
+         ierr = 0
+         call star_ptr(id,s,ierr)
+         if(ierr/=0) return
+
+         names(1) = 'alpha'
+         vals(1) = s% mixing_length_alpha
+
+         names(2) = 'tau_base'
+         vals(2) = s% tau_base
+
+      end subroutine data_for_extra_profile_header_items
       
 
       ! returns either keep_going or terminate.
@@ -214,9 +302,19 @@
       
       
       subroutine extras_after_evolve(id, ierr)
+         use astero_def
+         use utils_lib, only: mv
          integer, intent(in) :: id
          integer, intent(out) :: ierr
+         character (len=256) :: format_string, num_string, basename
          ierr = 0
+
+         write(format_string,'( "(i",i2.2,".",i2.2,")" )') num_digits, num_digits
+         write(num_string,format_string) sample_number+1 ! sample number hasn't been incremented yet
+         basename = trim(sample_results_prefix) // trim(num_string)
+         call mv(best_model_fgong_filename, trim(basename) // trim('.fgong'), skip_errors=.true.)
+         call mv(best_model_profile_filename, trim(basename) // trim('.profile'), skip_errors=.true.)
+
       end subroutine extras_after_evolve
 
       end module run_star_extras

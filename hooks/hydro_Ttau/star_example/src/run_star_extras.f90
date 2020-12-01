@@ -240,7 +240,7 @@
          ierr = 0
          call star_ptr(id, s, ierr)
          if (ierr /= 0) return
-         how_many_extra_profile_header_items = 0
+         how_many_extra_profile_header_items = 2
       end function how_many_extra_profile_header_items
 
 
@@ -254,10 +254,11 @@
          call star_ptr(id,s,ierr)
          if(ierr/=0) return
 
-         ! here is an example for adding an extra profile header item
-         ! also set how_many_extra_profile_header_items
-         ! names(1) = 'mixing_length_alpha'
-         ! vals(1) = s% mixing_length_alpha
+         names(1) = 'alpha'
+         vals(1) = s% mixing_length_alpha
+
+         names(2) = 'tau_base'
+         vals(2) = s% tau_base
 
       end subroutine data_for_extra_profile_header_items
 

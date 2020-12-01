@@ -9,7 +9,7 @@
    ! observables (e.g. Teff, logg, FeH)
    ! if normalize_chi2_spectro, the sum is divided by the number of
    ! terms
-      normalize_chi2_spectro = .true.
+      normalize_chi2_spectro = .false.
       ! only need to give values for target and sigma if include in chi^2
       
       include_Teff_in_chi2_spectro = .false. ! .true.
@@ -20,15 +20,13 @@
       logg_target = 3.97d0
       logg_sigma = 0.02d0
 
-      ! logL is taken from nominal value (Prsa et al. 2016)
-      ! L = nominal value / MESA constant = 3.828e33/3.8418e33
       include_logL_in_chi2_spectro = .true.
-      logL_target = -0.00156282310301d0 ! 0.0d0 ! 0.67d0
-      logL_sigma = 0.001d0 ! 0.05d0
+      logL_target = 0.0d0
+      logL_sigma = 0.001d0
       
       include_FeH_in_chi2_spectro = .true. ! [Fe/H]
-      FeH_target = 0.0d0 ! 0.09
-      FeH_sigma = 0.001d0 ! 0.05
+      FeH_target = 0.0d0
+      FeH_sigma = 0.001d0
       
          ! we calculate model [Fe/H] as = log10((Z/X)/Z_div_X_solar)
          ! using model surface average values for Z and X.
@@ -46,8 +44,9 @@
       ! nominal value in Prsa et al. (2016) is rounded version of
       ! their mean seismic radius, which is slightly different
       include_logR_in_chi2_spectro = .true. ! .false.
-      ! logR_target = -0.0002571658782485d0 ! 695.568 Mm
-      logR_target = -0.0002009758653737d0 ! 695.658 Mm
+      ! logR_target = -8.240953113747243d-05 ! 695.568 Mm
+      ! logR_target = -2.6219518262729926e-05 ! 695.658 Mm
+      logR_target = 0 ! 695.7 Mm
       logR_sigma = 1d-4
    
       include_surface_Z_div_X_in_chi2_spectro = .false.
@@ -83,13 +82,6 @@
       include_Rcz_in_chi2_spectro = .false. ! radius of base of convective zone
       Rcz_target = 0.713d0 ! Bahcall, Serenelli, Basu, 2005
       Rcz_sigma = 1d-3
-   
-      include_csound_rms_in_chi2_spectro = .false. ! check sound profile
-      csound_rms_target = 0
-      csound_rms_sigma = 2d-6
-      report_csound_rms = .false. 
-         ! if true, then calculate and report even if not included in chi2
-
 
 
       ! to include user-defined variables in chi^2 spectro
@@ -421,13 +413,13 @@
          vary_FeH = .true. ! FeH = [Fe/H] = log10((Z/X)/Z_div_X_solar)
             ! Z and X are the initial uniform values
          vary_Y = .true. ! Y the initial uniform value
-         vary_alpha = .true.
+         vary_alpha = .false.
          vary_f_ov = .false.
          
       ! to optimise user-defined parameters
       ! set the "my_param" variables in your set_my_param routine
       ! and set the vary_, first_, min_, max_ and delta_ controls below
-         vary_my_param1 = .false.
+         vary_my_param1 = .true.
          vary_my_param2 = .false.
          vary_my_param3 = .false.
 
@@ -443,31 +435,30 @@
          ! http://www.dtic.mil/dtic/tr/fulltext/u2/a535671.pdf
          ! (GM)_sun = 1.32712442099e20 \pm 1e10 m^3/s^2
          ! M_sun/M_MESA = (GM)_sun/(G_MESA*M_MESA)
-         first_FeH = 0.0568040577d0
-         first_Y = 0.2729720359d0
-         first_mass = 0.999605801615d0 ! 1d0
-         first_alpha = 1.00d0 ! 1.99543582d0 ! 1.908d0
-         first_f_ov = 0.0d0 ! 0.015
-         ! [0.27390035 0.05647046 1.03219135]
-         first_my_param1 = 0
+         first_FeH = 0.0560167803
+         first_Y = 0.2715560186
+         first_mass = 1
+         first_alpha = 1.8
+         first_f_ov = 0
+         first_my_param1 = 1.0355772536
          first_my_param2 = 0
          first_my_param3 = 0
          
-         min_FeH = 0.06d0
-         min_Y = 0.27d0
-         min_mass = 0.95d0
-         min_alpha = 1.83d0
-         min_f_ov = 0d0
-         min_my_param1 = 0
+         min_FeH = 0.0
+         min_Y = 0.26
+         min_mass = 0.95
+         min_alpha = 1.6
+         min_f_ov = 0
+         min_my_param1 = 0.95
          min_my_param2 = 0
          min_my_param3 = 0
          
-         max_FeH = 0.064d0
-         max_Y = 0.276d0
-         max_mass = 1.05d0
-         max_alpha = 1.9d0
-         max_f_ov = 0d0
-         max_my_param1 = 0
+         max_FeH = 0.1
+         max_Y = 0.30
+         max_mass = 1.05
+         max_alpha = 2.0
+         max_f_ov = 0.05
+         max_my_param1 = 1.05
          max_my_param2 = 0
          max_my_param3 = 0
    
@@ -478,7 +469,7 @@
          delta_mass = 0.01
          delta_alpha = 0.1
          delta_f_ov = 0
-         delta_my_param1 = 0
+         delta_my_param1 = 0.01
          delta_my_param2 = 0
          delta_my_param3 = 0
          
@@ -559,8 +550,6 @@
          ! surface_He_limit = surface_He_target + &
             ! surface_He_sigma*sigmas_coeff_for_surface_He_limit
          ! Rcz_limit = Rcz_target + Rcz_sigma*sigmas_coeff_for_Rcz_limit
-         ! csound_rms_limit = csound_rms_target + &
-            ! csound_rms_sigma*sigmas_coeff_for_csound_rms_limit
          ! delta_nu_limit = delta_nu + &
             ! delta_nu_sigma*sigmas_coeff_for_delta_nu_limit
          
@@ -577,9 +566,7 @@
          sigmas_coeff_for_surface_Z_div_X_limit = 0 ! disable by setting to 0
          sigmas_coeff_for_surface_He_limit = 0 ! disable by setting to 0
          sigmas_coeff_for_Rcz_limit = 0 ! disable by setting to 0
-         sigmas_coeff_for_csound_rms_limit = 0 ! disable by setting to 0
          sigmas_coeff_for_delta_nu_limit = 0 ! -5 ! disable by setting to 0
-         sigmas_coeff_for_csound_rms_limit = 0 ! disable by setting to 0
          sigmas_coeff_for_my_var1_limit = 0 ! disable by setting to 0
          sigmas_coeff_for_my_var2_limit = 0 ! disable by setting to 0
          sigmas_coeff_for_my_var3_limit = 0 ! disable by setting to 0
@@ -661,7 +648,7 @@
       gyre_postfix = '.data'
       max_num_gyre_points = -1 ! only used if > 1
       
-      write_gyre_for_best_model = .true.
+      write_gyre_for_best_model = .false.
       best_model_gyre_filename = 'best.gyre'
       
       write_profile_for_best_model = .true.
@@ -672,11 +659,6 @@
       
       save_info_for_last_model = .false. ! if true, treat final model as "best"
       last_model_save_info_filename = '' ! and save info about final model to this file.
-      
-      shell_script_for_each_sample = 'mv best.gyre outputs/sample_#.gyre; mv best.fgong outputs/sample_#.fgong; mv best.profile outputs/sample_#.profile ; grep x_ctrl inlist_hydro_Ttau >> outputs/sample_#.data' ! executed after at end of sample run
-      shell_script_num_string_char = '#' ! replace by num string for sample
-      ! Do whatever you like in the script.  e.g.,
-      ! 'cp best.mod outputs/sample#_best.mod; cp LOGS/history.data outputs/sample#_history.data'
       
    
    ! miscellaneous
@@ -716,7 +698,7 @@
       
       ! oscillation analysis
 
-         oscillation_code = 'adipls' ! or 'gyre'   <<< lowercase
+         oscillation_code = 'gyre' ! 'adipls' ! or 'gyre'   <<< lowercase
             
          trace_time_in_oscillation_code = .false.
          
