@@ -219,6 +219,7 @@ end function wd_f
 subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   use chem_def
   use eos_def
+  use kap_def
   use kap_lib
   use chem_lib
   use eos_lib, only: Radiation_Pressure
@@ -243,6 +244,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
        d_eos_dlnd(num_eos_basic_results), d_eos_dlnT(num_eos_basic_results), &
        d_eos_dabar(num_eos_basic_results), d_eos_dzbar(num_eos_basic_results), &
        lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
+       eta, d_eta_dlnRho, d_eta_dlnT, &
        cgrav, r, rmid, rho, logRho, T, lnT, L, P, P0, dm, m0, L0, r0, lnT0, T0, &
        rho0, rho_mid, Pmid, chiRho0, chiRho_mid, chiT0, chiT_mid, Cp0, Cp_mid, &
        grada0, grada_mid, mmid, Tmid, Lmid, &
@@ -250,7 +252,9 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   real(dp), pointer :: xh(:,:), q(:), dq(:) ! model structure info
   real(dp), allocatable :: d_eos_dxa(:,:)
 
-  real(dp) :: opacity, kap_cond, kap_rad, dlnkap_dlnd, dlnkap_dlnT, frac_Type2
+  real(dp) :: opacity, kap_cond, kap_rad, dlnkap_dlnd, dlnkap_dlnT
+  real(dp) :: dlnkap_dxa(s% species)
+  real(dp) :: kap_fracs(num_kap_fracs)
   real(dp) :: XC, XN, XO, XNe
 
   real(dp) :: z2bar, ye, mass_correction, sumx
@@ -339,9 +343,10 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   L = L_core * (m/mstar)
 
   call kap_get( &
-       s% kap_handle, zbar, X, Z, XC, XN, XO, XNe, log10(rho), log10(T), &
+       s% kap_handle, s% species, s% chem_id, s% net_iso, xa, log10(rho), log10(T), &
        lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-       frac_Type2, opacity, dlnkap_dlnd, dlnkap_dlnT, ierr)
+       eta, d_eta_dlnRho, d_eta_dlnT, &
+       kap_fracs, opacity, dlnkap_dlnd, dlnkap_dlnT, dlnkap_dxa, ierr)
 
   if (ierr /= 0) then
      write(*,*) 'failed in kap_get'
@@ -351,7 +356,6 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   call eval_gradT( &
        s, zbar, x, y, xa, rho, m, mstar, r, T, lnT, L, P, &
        chiRho, chiT, Cp, opacity, grada, &
-       lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
        gradT, ierr )
   if (ierr /= 0) return
 
@@ -436,9 +440,10 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
               call set_composition_info
 
               call kap_get( &
-                   s% kap_handle, zbar, X, Z, XC, XN, XO, XNe, log10(rho_mid), log10(Tmid), &
+                   s% kap_handle, s% species, s% chem_id, s% net_iso, xa, log10(rho_mid), log10(Tmid), &
                    lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-                   frac_Type2, opacity, dlnkap_dlnd, dlnkap_dlnT, ierr)
+                   eta, d_eta_dlnRho, d_eta_dlnT, &
+                   kap_fracs, opacity, dlnkap_dlnd, dlnkap_dlnT, dlnkap_dxa, ierr)
               if (ierr /= 0) then
                  write(*,*) 'failed in kap_get'
                  return
@@ -454,7 +459,6 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
                  call eval_gradT( &
                       s, zbar, x, y, xa, rho_mid, mmid, mstar, rmid, Tmid, log(Tmid), Lmid, Pmid, &
                       chiRho_mid, chiT_mid, Cp_mid, opacity, grada_mid, &
-                      lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
                       gradT, ierr )
                  if (ierr /= 0) return
               else
@@ -535,12 +539,12 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
   mstar = m ! actual total mass
 
-  call star_normalize_dqs(nz, dq, ierr)
+  call star_normalize_dqs(s% id, nz, dq, ierr)
   if (ierr /= 0) then
      if (s% report_ierr) write(*,*) 'set_qs failed in pre ms model'
      return
   end if
-  call star_set_qs(nz, q, dq, ierr)
+  call star_set_qs(s% id, nz, q, dq, ierr)
   if (ierr /= 0) then
      if (s% report_ierr) write(*,*) 'set_qs failed in pre ms model'
      return
@@ -570,6 +574,9 @@ contains
     lnfree_e = res(i_lnfree_e)
     d_lnfree_e_dlnRho = d_eos_dlnd(i_lnfree_e)
     d_lnfree_e_dlnT = d_eos_dlnT(i_lnfree_e)
+    eta = res(i_eta)
+    d_eta_dlnRho = d_eos_dlnd(i_eta)
+    d_eta_dlnT = d_eos_dlnT(i_eta)
   end subroutine unpack_eos_results
 
 
@@ -579,7 +586,6 @@ end subroutine build1_wd_model
 subroutine eval_gradT( &
      s, zbar, x, y, xa, rho, m, mstar, r, T, lnT, L, P, &
      chiRho, chiT, Cp, opacity, grada, &
-     lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
      gradT, ierr )
   use chem_def, only: ih1
   use kap_lib, only : kap_get
@@ -587,8 +593,7 @@ subroutine eval_gradT( &
   type (star_info), pointer :: s
   real(dp), intent(in) :: &
        zbar, x, y, xa(:), rho, m, mstar, r, T, lnT, L, P, &
-       chiRho, chiT, Cp, opacity, grada, &
-       lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT
+       chiRho, chiT, Cp, opacity, grada
   real(dp), intent(out) :: gradT
   integer, intent(out) :: ierr
 
@@ -596,7 +601,7 @@ subroutine eval_gradT( &
 
   real(dp) :: &
        cgrav, Cv, csound, &
-       prev_conv_vel, max_conv_vel, dt, gradL_composition_term, tau
+       max_conv_vel, dt, gradL_composition_term, tau
   integer :: mixing_type
   real(dp) :: mlt_basics(num_mlt_results)
   real(dp), target :: mlt_partials1_ary(num_mlt_partials*num_mlt_results)
@@ -629,7 +634,6 @@ subroutine eval_gradT( &
   gradL_composition_term = 0
   Cv = Cp
   tau = 1
-  prev_conv_vel = -1
   max_conv_vel = 1d99
   dt = -1
   csound = 0 ! not used when dt <= 0
@@ -675,7 +679,7 @@ subroutine eval_gradT( &
        s% mixing_length_alpha, s% alt_scale_height_flag, s% remove_small_D_limit, &
        s% MLT_option, s% Henyey_MLT_y_param, s% Henyey_MLT_nu_param, &
        normal_mlt_gradT_factor, &
-       prev_conv_vel, max_conv_vel, s% mlt_accel_g_theta, dt, tau, .false., &
+       max_conv_vel, dt, tau, .false., &
        mixing_type, mlt_basics, mlt_partials1, ierr)
   if (ierr /= 0) return
 
