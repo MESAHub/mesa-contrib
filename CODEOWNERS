@@ -1,0 +1,13 @@
+# Lines starting with '#' are comments.
+# Each line is a file pattern followed by one or more owners.
+
+# Every hook should have an owner
+
+hooks/czb_mesh_function @jschwab
+hooks/enhanced_Tayler_Spruit @adamjermyn
+hooks/hydro_Ttau @warrickball
+hooks/low_mass_torques @adamjermyn
+hooks/remove_surface_by_temperature @adamjermyn
+hooks/wd_builder @jschwab
+hooks/atm_T_tau_gradr_factor.f90 @warrickball
+hooks/cmd_line_args.py @warrickball

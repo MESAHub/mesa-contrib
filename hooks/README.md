@@ -9,7 +9,9 @@ Please include
 ``
 This contribution is maintained by Your Name/GitHub ID
 ``
+
 in your `README.md` so that your contribution has a contact and known maintainer.
+You should also add your name to the top-level `CODEOWNERS` file.
 
 ## Usage
 
