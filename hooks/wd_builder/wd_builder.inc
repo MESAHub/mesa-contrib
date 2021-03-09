@@ -242,7 +242,6 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
        P_surf_limit, y, logPgas, Prad, Pgas, try_dlogPgas, logPgas0, &
        res(num_eos_basic_results), P_c, logP, m, &
        d_eos_dlnd(num_eos_basic_results), d_eos_dlnT(num_eos_basic_results), &
-       d_eos_dabar(num_eos_basic_results), d_eos_dzbar(num_eos_basic_results), &
        lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
        eta, d_eta_dlnRho, d_eta_dlnT, &
        cgrav, r, rmid, rho, logRho, T, lnT, L, P, P0, dm, m0, L0, r0, lnT0, T0, &
@@ -328,9 +327,9 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   ! density at nz
   logRho_guess = log10(rho_c)
   call star_solve_eos_given_PgasT( &
-       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, xa, &
+       s% id, 0, xa, &
        lnT/ln10, log10(Pgas), logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
-       logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
+       logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dxa, &
        ierr)
   if (ierr /= 0) return
   rho = exp10(logRho)
@@ -474,9 +473,9 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
            logRho_guess = logRho
            call star_solve_eos_given_PgasT( &
-                s% id, 0, z, x, abar, zbar, xa, &
+                s% id, 0, xa, &
                 lnT/ln10, logPgas, logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
-                logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
+                logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dxa, &
                 ierr)
            rho = exp10(logRho)
            if (ierr /= 0) return
