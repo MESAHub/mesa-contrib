@@ -60,7 +60,7 @@
         nz = s% nz
         vals(1:nz,1:nfcns) => vals1(1:nz*nfcns)
         names(1) = 'czb_mesh_function'
-        call czb_mesh_function(s, vals(1:nz,1), ierr)
+        call czb_mesh_fcn(s, vals(1:nz,1), ierr)
       end subroutine other_mesh_fcn_data
 
 
@@ -74,7 +74,6 @@
          
          include 'czb_mesh_function/czb_mesh_function_extras_controls.inc'
 
-         s% use_other_mesh_functions = .true.
          s% how_many_other_mesh_fcns => how_many_other_mesh_fcns
          s% other_mesh_fcn_data => other_mesh_fcn_data
          
