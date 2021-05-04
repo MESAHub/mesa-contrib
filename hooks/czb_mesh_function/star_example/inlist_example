@@ -1,0 +1,76 @@
+&star_job
+  ! see star/defaults/star_job.defaults
+
+  ! begin with a ZAMS
+    create_pre_main_sequence_model = .false.
+
+  ! save a model at the end of the run
+    save_model_when_terminate = .false.
+    save_model_filename = '15M_at_TAMS.mod'
+
+  ! display on-screen plots
+    pgstar_flag = .true.
+
+/ ! end of star_job namelist
+
+
+&eos
+  ! eos options
+  ! see eos/defaults/eos.defaults
+
+/ ! end of eos namelist
+
+
+&kap
+  ! kap options
+  ! see kap/defaults/kap.defaults
+  use_Type2_opacities = .true.
+  Zbase = 0.02
+
+/ ! end of kap namelist
+
+
+&controls
+  ! see star/defaults/controls.defaults
+
+  ! starting specifications
+    initial_mass = 2.5 ! in Msun units
+    initial_z = 0.02
+
+  ! when to stop
+
+    ! stop when the center mass fraction of h1 drops below this limit
+    xa_central_lower_limit_species(1) = 'h1'
+    xa_central_lower_limit(1) = 1d-3
+
+  ! wind
+
+  ! atmosphere
+
+  ! rotation
+
+  ! element diffusion
+
+  ! mlt
+
+  ! mixing
+
+    overshoot_scheme(1) = 'exponential'
+    overshoot_zone_type(1) = 'any'
+    overshoot_zone_loc(1) = 'core'
+    overshoot_bdy_loc(1) = 'top'
+    overshoot_f(1) = 0.005
+    overshoot_f0(1) = 0.025
+
+  ! use mesh function to resolve overshoot region
+    use_other_mesh_functions = .true.
+
+  ! timesteps
+
+  ! mesh
+
+  ! solver
+
+  ! output
+
+/ ! end of controls namelist

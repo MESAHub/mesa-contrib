@@ -1,0 +1,42 @@
+&pgstar
+  ! see star/defaults/pgstar.defaults
+
+  ! show temperature/density profile
+  ! this plots the internal structure at single timestep
+    TRho_Profile_win_flag = .true.
+
+  ! add legend explaining colors
+    show_TRho_Profile_legend = .true.
+
+  ! display numerical info about the star
+    show_TRho_Profile_text_info = .true.
+
+  ! set window size (aspect_ratio = height/width)
+    TRho_Profile_win_width = 8
+    TRho_Profile_win_aspect_ratio = 0.75
+
+
+    Profile_Panels1_win_flag = .true.
+
+    Profile_Panels1_win_width = 6
+    Profile_Panels1_win_aspect_ratio = 0.75
+
+    Profile_Panels1_xaxis_name = 'logP'
+    Profile_Panels1_xaxis_reversed = .false.
+    Profile_Panels1_xmin = 16.5
+    Profile_Panels1_xmax = -101d0
+    Profile_Panels1_xmargin = 0d0
+    Profile_Panels1_show_mix_regions_on_xaxis = .false.
+
+    Profile_Panels1_show_grid = .true.
+
+    Profile_Panels1_num_panels = 2
+    Profile_Panels1_yaxis_name(1) = 'log_D_mix'
+    Profile_Panels1_ymin(1) = 0
+    Profile_Panels1_other_yaxis_name(1) = 'log_D_ovr'
+    Profile_Panels1_other_ymin(1) = 0
+    Profile_Panels1_yaxis_name(2) = 'zone'
+    Profile_Panels1_other_yaxis_name(2) = 'mixing_type'
+
+
+/ ! end of pgstar namelist

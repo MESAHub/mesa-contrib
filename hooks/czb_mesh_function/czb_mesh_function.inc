@@ -18,7 +18,7 @@ subroutine read_inlist_czb_mesh_function(ierr)
   if (ierr /= 0) then
      write(*, *) 'Failed to open control namelist file ', trim(filename)
   else
-     read(unit, nml=czb_mesh_function_nml, iostat=ierr)  
+     read(unit, nml=czb_mesh_function, iostat=ierr)
      close(unit)
      if (ierr /= 0) then
         write(*, *) 'Failed while trying to read control namelist file ', trim(filename)
@@ -26,7 +26,7 @@ subroutine read_inlist_czb_mesh_function(ierr)
              'The following runtime error message might help you find the problem'
         write(*, *) 
         open(newunit=unit, file=trim(filename), action='read', delim='quote', status='old', iostat=ierr)
-        read(unit, nml=czb_mesh_function_nml)
+        read(unit, nml=czb_mesh_function)
         close(unit)
      end if
   end if
@@ -34,13 +34,13 @@ subroutine read_inlist_czb_mesh_function(ierr)
 end subroutine read_inlist_czb_mesh_function
 
 
-subroutine czb_mesh_function (s, fcn, ierr)
+subroutine czb_mesh_fcn (s, fcn, ierr)
 
   type(star_info), pointer :: s
   real(dp), intent(inout)    :: fcn(:)
   integer, intent(out)     :: ierr
 
-  logical, parameter :: DEBUG = .TRUE.
+  logical, parameter :: DEBUG = .FALSE.
 
   integer  :: i
   integer  :: j
@@ -158,7 +158,7 @@ subroutine czb_mesh_function (s, fcn, ierr)
 
   return
 
-end subroutine czb_mesh_function
+end subroutine czb_mesh_fcn
 
 subroutine eval_czb_mesh_fcn (s, i, j, fcn, ierr)
 

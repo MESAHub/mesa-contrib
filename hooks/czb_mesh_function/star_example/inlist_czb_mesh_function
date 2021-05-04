@@ -1,8 +1,8 @@
 &czb_mesh_function
 
-  czb_mesh_zone_type(1) = 'any'
-  czb_mesh_zone_loc(1) = 'any'
-  czb_mesh_bdy_loc(1) = 'bottom'
+  czb_mesh_zone_type(1) = 'any' !  Possible values: burn_H, burn_He, burn_Z, nonburn, any
+  czb_mesh_zone_loc(1) = 'core' !  Possible values: core, shell, any
+  czb_mesh_bdy_loc(1) = 'any'   !  Possible values: bottom, top, any
   czb_mesh_f(1) = 0.005
   czb_mesh_l(1) = 0.05
       

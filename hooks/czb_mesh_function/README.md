@@ -10,7 +10,9 @@ This contribution is maintained by Josiah Schwab (@jschwab).
 ## Usage
 
 An example inlist and `run_star_extras.f90` are provided in the
-`star_example` subfolder.
+`star_example` subfolder.  That setup illustrates putting additional
+zones around the top boundary of the core convection zone in a 2.5
+Msun star.
 
 The czb_mesh inlist options follow the same pattern-matching approach
 as the MESA overshooting controls.
