@@ -8,6 +8,22 @@
       set_initial_omega = .true.
 / ! end of star_job namelist
 
+
+&eos
+  ! eos options
+  ! see eos/defaults/eos.defaults
+
+/ ! end of eos namelist
+
+
+&kap
+  ! kap options
+  ! see kap/defaults/kap.defaults
+  use_Type2_opacities = .true.
+  Zbase = 0.02
+
+/ ! end of kap namelist
+
 &controls
       !------------------------  MAIN
       initial_mass = 1.6
@@ -65,4 +81,5 @@
       overshoot_f0_above_burn_he_shell = 0.005
       overshoot_f_below_burn_he_shell = 0.015
       overshoot_f0_below_burn_he_shell = 0.005
+
 / ! end of controls namelist
