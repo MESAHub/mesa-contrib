@@ -598,35 +598,19 @@ subroutine eval_gradT( &
   integer, intent(out) :: ierr
 
   character (len=16) :: MLT_option
-  type(auto_diff_real_star_order1) :: &
-       r_ad, L_ad, T_ad, P_ad, opacity_ad, rho_ad, chiRho_ad, chiT_ad, Cp_ad, &
-       gradr_ad, grada_ad, scale_height_ad
   integer :: iso
-  real(dp) :: &
-       XH1, cgrav, gradL_composition_term, &
+  real(dp) :: gradr, scale_height, &
+       cgrav, gradL_composition_term, &
        mixing_length_alpha, alpha_semiconvection, thermohaline_coeff
   integer :: mixing_type
-  type(auto_diff_real_star_order1) :: &
-       gradT_ad, Y_face_ad, conv_vel_ad, D_ad, Gamma_ad
   ierr = 0
 
   cgrav = standard_cgrav
 
   ! set passed values; don't care about derivatives
-  r_ad = r
-  L_ad = L
-  T_ad = T
-  P_ad = P
-  opacity_ad = opacity
-  rho_ad = rho
-  chiRho_ad = chiRho
-  chiT_ad = chiT
-  Cp_ad = Cp
-  gradr_ad = P*opacity*L/(16d0*pi*clight*m*cgrav*Radiation_Pressure(T))
-  grada_ad = grada
-  scale_height_ad = P/((cgrav*m/(r*r))*rho)
+  gradr = P*opacity*L/(16d0*pi*clight*m*cgrav*Radiation_Pressure(T))
+  scale_height = P/((cgrav*m/(r*r))*rho)
 
-  XH1 = x
   ! m is passed directly
 
   MLT_option = 'Henyey'
@@ -634,16 +618,12 @@ subroutine eval_gradT( &
   mixing_length_alpha = 1.8
   alpha_semiconvection = 0
   thermohaline_coeff = 0
+  iso = ih1 ! doesn't matter since no thermohaline
 
-  call star_mlt_results(s% id, 0, MLT_option, &  ! NOTE: k=0 is a valid arg
-       r_ad, L_ad, T_ad, P_ad, opacity_ad, rho_ad, chiRho_ad, chiT_ad, Cp_ad, &
-       gradr_ad, grada_ad, scale_height_ad, &
-       iso, XH1, cgrav, m, gradL_composition_term, mixing_length_alpha, &
-       alpha_semiconvection, thermohaline_coeff, &
-       mixing_type, gradT_ad, Y_face_ad, conv_vel_ad, D_ad, Gamma_ad, ierr)
-  if (ierr /= 0) return
-
-  gradT = gradT_ad% val
+  call star_mlt_gradT(s% id, MLT_option, & ! can be useful when creating models
+       r, L, T, P, opacity, rho, chiRho, chiT, Cp, gradr, grada, scale_height, &
+       iso, x, cgrav, m, gradL_composition_term, mixing_length_alpha, &
+       gradT, mixing_type, ierr)
 
 end subroutine eval_gradT
 
