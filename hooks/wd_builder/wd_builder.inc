@@ -448,7 +448,7 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
                  return
               end if
 
-              call kap_get_elect_cond_opacity( &
+              call kap_get_elect_cond_opacity(s% kap_handle, &
                    zbar, log10(rho_mid), log10(Tmid), &
                    kap_cond, dlnkap_dlnd, dlnkap_dlnT, ierr)
 
