@@ -28,15 +28,34 @@ variable `MESA_CONTRIB_DIR` there. e.g.
 Then, `$MESA_CONTRIB_DIR/hooks` will be added to the include path when
 compiling a MESA `work` folder.  Use your chosen routine by adding an
 `include` statements after `contains` in your `run_star_extras.f90`. e.g.
-to use `hooks/other_wind_grafener.f90`, you would add something like
+to use `hooks/try_mesa_contrib.f90`, you would add something like
 
 ````f90
     ...
     contains
    
-    include 'other_wind_grafener.f90'       ! add this line
+    include 'try_mesa_contrib.f90'       ! add this line
    
     subroutine extras_controls(id, ierr)
        integer, intent(in) :: id
-    ...
+       ...
 ````
+
+to get access to the (trivial) subroutine `try_mesa_contrib`.  If you
+call this at the end of `extras_controls`,
+
+````f90
+       ...
+
+       call try_mesa_contrib
+
+    end subroutine
+````
+
+you should see the message
+
+````
+you're ready to call routines from mesa-contrib
+````
+
+shortly after the start of your MESA run.
