@@ -136,10 +136,10 @@
             if (s% tau(j) > tau23) then
                if (j == 1) then
                   ! Extrapolate
-                  p_tau = s% p(1) * tau23 / s%tau(1)
+                  p_tau = s% peos(1) * tau23 / s%tau(1)
                else
                   ! Interpolate
-                  p_tau = (s% p(j) * (s% tau(j) - tau23) + s% p(j-1) *(tau23 - s% tau(j-1))) &
+                  p_tau = (s% peos(j) * (s% tau(j) - tau23) + s% peos(j-1) *(tau23 - s% tau(j-1))) &
                            / (s%tau(j) -  s% tau(j-1))
                end if
                exit ! Leave the loop

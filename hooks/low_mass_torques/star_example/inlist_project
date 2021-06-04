@@ -19,11 +19,8 @@
     set_rate_c12ag = 'Kunz'
     set_rate_n14pg = 'jina reaclib'
 
-    kappa_file_prefix = 'OP_gs98'
-    kappa_lowT_prefix = 'lowT_fa05_gs98' ! for lower temperatures.
-
-    change_lnPgas_flag = .true.
-    new_lnPgas_flag = .false.
+    ! change_lnPgas_flag = .true.
+    ! new_lnPgas_flag = .false.
 
     set_uniform_initial_composition = .true.
     initial_h1 =   0.711552
@@ -50,6 +47,14 @@
 
 / !end of star_job namelist
 
+
+&kap
+
+    Zbase = 0.018588
+    kap_file_prefix = 'OP_gs98'
+    kap_lowT_prefix = 'lowT_fa05_gs98' ! for lower temperatures.
+
+/
 
 &controls
 
@@ -80,7 +85,8 @@
     uniform_am_nu_non_rot = 1d20
     
     ! atmosphere
-    which_atm_option = 'photosphere_tables'
+    atm_option = 'table'
+    atm_table = 'photosphere'
 
     ! atomic diffusion
     do_element_diffusion = .false. ! determines whether or not we do diffusion
