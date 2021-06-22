@@ -33,7 +33,8 @@
   ! starting specifications
     use_other_build_initial_model = .true.
     initial_mass =  0.6 ! in Msun
-    x_ctrl(1) = 2e8
+    x_ctrl(1) = 2e8 ! central temperature (K)
+    x_ctrl(2) = 0.1 ! initial Lcore (Lsun)
 
   ! turn off burning
     eps_nuc_factor = 0

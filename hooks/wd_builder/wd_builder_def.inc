@@ -1,5 +1,6 @@
   integer, parameter :: i_Tc = 1
-  logical, parameter :: dbg = .false.
+  integer, parameter :: i_Lc = 2
+  logical, parameter :: dbg = .true.
 
   abstract interface
      subroutine get_xa_interface(s, q, xa)
