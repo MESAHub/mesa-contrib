@@ -45,7 +45,7 @@
     atm_table = 'DB_WD_tau_25'
 
   ! options for energy conservation (see MESA V, Section 3)
-     use_dedt_form_of_energy_eqn = .false.
+     energy_eqn_option = 'eps_grav'
      use_gold_tolerances = .false.
 
 / ! end of controls namelist

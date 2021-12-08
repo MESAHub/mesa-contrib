@@ -621,6 +621,7 @@ subroutine eval_gradT( &
 
   ! mlt outputs
   integer :: mixing_type
+  real(dp) :: Y_face, conv_vel, D, Gamma
 
   real(dp), parameter :: cgrav = standard_cgrav
 
@@ -641,7 +642,7 @@ subroutine eval_gradT( &
   call star_mlt_gradT(s% id, MLT_option, &
        r, L, T, P, opacity, rho, chiRho, chiT, Cp, gradr, grada, scale_height, &
        iso, X, cgrav, m, gradL_composition_term, mixing_length_alpha, &
-       gradT, mixing_type, ierr)
+       mixing_type, gradT, Y_face, conv_vel, D, Gamma, ierr)
 
 end subroutine eval_gradT
 
