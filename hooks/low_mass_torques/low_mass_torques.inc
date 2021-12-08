@@ -51,22 +51,22 @@
                ! Figure out how massive the top convection zone is
                net_I = 0d0
                do k=1,k_end   
-                  net_I = net_I + s% i_rot(k) * s% dm(k) 
+                  net_I = net_I + s% i_rot(k)%val * s% dm(k)
                end do
 
                ! Distribute Jdot
                do k=1,k_end
-                  s% extra_jdot(k) = -jdot * s% i_rot(k) * s% dm(k)  / net_I
+                  s% extra_jdot(k) = -jdot * s% i_rot(k)%val * s% dm(k)  / net_I
                end do
             else if (wind_distribution_option == 2) then
                ! Distribute jdot proportional to i_rot in the whole star
                net_I = 0d0
                do k=1,s% nz
-                  net_I = net_I + s% i_rot(k) * s% dm(k) 
+                  net_I = net_I + s% i_rot(k)%val * s% dm(k)
                end do
 
                do k=1,s% nz   
-                  s% extra_jdot(k) = -jdot * s% i_rot(k) * s% dm(k) / net_I
+                  s% extra_jdot(k) = -jdot * s% i_rot(k)%val * s% dm(k) / net_I
                end do
             end if
    
