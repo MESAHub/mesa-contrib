@@ -18,11 +18,11 @@ subroutine detach_binary(binary_id, ierr)
       ! detaching a binary with a point mass would imply
       ! evolving two detached point masses
       ! probably not what you want to do
-      call mesa_error(&
-           __FILE__, &
-           __LINE__, &
-           'Cannot detach a binary with point mass companion')
-      ! STOP 'Cannot detach a binary with point mass companion'
+      ! call mesa_error(&
+      !      __FILE__, &
+      !      __LINE__, &
+      !      'Cannot detach a binary with point mass companion')
+      STOP 'Cannot detach a binary with point mass companion'
    end if
 
    b% job% evolve_both_stars = .false.
