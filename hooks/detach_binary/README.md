@@ -12,12 +12,6 @@ called.
 Typically this will be used from `extras_binary_finish_step` in
 `run_binary_extras.f90`.
 
-Example inlists and `run_binary_extras.f90` (based on the
-`$MESA_DIR/binary/work` template) are provided in `test_detach_binary`.
-In this example at `model_number = 3` the binary is detached and 
-the evolution of the initially less massive star is continued until
-`model_number=10`. It has been tested with MESA revision 15140.
-
 To use this routine you need to include it in your `run_binary_extras.f90`,
 after the `contains` statement you'll need
 
@@ -27,6 +21,16 @@ after the `contains` statement you'll need
 
         include 'detach_binary/detach_binary.inc'
 ```
+
+### Example
+
+Example inlists and `run_binary_extras.f90` (based on the
+`$MESA_DIR/binary/work` template) are provided in `test_detach_binary`. 
+In this example at `model_number = 3` the binary 
+is detached and the evolution of the initially 
+less massive star is continued until `model_number=5`. 
+It has been tested with MESA version 15140 and `29bd15f`.
+
 
 ## Maintainer
 
