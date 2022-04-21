@@ -5,3 +5,6 @@ photos/*
 photos1/*
 photos2/*
 *.data
+*.o
+*.mod
+*.smod
