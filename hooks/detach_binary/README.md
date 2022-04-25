@@ -8,7 +8,15 @@ because of a SN explosion, cf. [Blaauw
 [Renzo et al.
 2019](https://ui.adsabs.harvard.edu/abs/2019A%26A...624A..66R/abstract)).
 It assumes that you are running a binary with `evolve_both_stars =
-.true.` and will stop the run otherwise when called.
+.true.` and will stop the run otherwise when invoked.
+
+When calling this routine:
+ * star 1 will be turned into a point mass, the `b% d_i%` pointer is
+   set to star 2
+ * the binary separation is set to something enormous (`1d99` solar
+ radii)
+ * tides, RLOF, magnetic braking, and angular momentum accretion will
+   be ignored in the remaining evolution
 
 ## Usage
 
