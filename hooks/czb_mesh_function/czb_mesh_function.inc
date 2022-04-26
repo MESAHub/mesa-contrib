@@ -151,9 +151,9 @@ subroutine czb_mesh_fcn (s, fcn, ierr)
   end do conv_bdy_loop
 
   ! Finish
-  fcn(1) = s% lnP(1)
+  fcn(1) = s% lnPeos(1)
   do k = 2, s% nz
-     fcn(k) = fcn(k-1) + (s% lnP(k) - s% lnP(k-1)) * fcn(k)
+     fcn(k) = fcn(k-1) + (s% lnPeos(k) - s% lnPeos(k-1)) * fcn(k)
   end do
 
   return
@@ -380,7 +380,7 @@ end subroutine eval_czb_mesh_fcn
       call two_piece_linear_coeffs(x, x0, x1, x2, a0, a1, a2, ierr)
       if (ierr /= 0) return
 
-      P = exp(a0*s%lnP(k_o) + a1*s%lnP(k_m) + a2*s%lnP(k_i))
+      P = exp(a0*s%lnPeos(k_o) + a1*s%lnPeos(k_m) + a2*s%lnPeos(k_i))
       rho = exp(a0*s%lnd(k_o) + a1*s%lnd(k_m) + a2*s%lnd(k_i))
 
       ! Evaluate the pressure scale height

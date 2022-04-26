@@ -27,11 +27,13 @@ subroutine wd_builder(id, ierr)
   call star_ptr(id, s, ierr)
   if (ierr /= 0) return
 
+  ! set mass variables
   mstar = s% initial_mass * Msun
   s% mstar = mstar
   s% star_mass = mstar/Msun
   s% xmstar = mstar
 
+  ! set center variables (usual r = 0 conditions)
   s% M_center = 0
   s% L_center = 0
   s% R_center = 0
@@ -43,13 +45,18 @@ subroutine wd_builder(id, ierr)
 
   ! pick a luminosity for the core; will impose L(m) = Lcore * m
   ! this won't be the final L, MESA is just happier if gradT != 0
-  L_core = 0.1 * Lsun
+  L_core = s% x_ctrl(i_Lc) * Lsun
+
+  ! rough guess for initial central density
+  rho_c = get_rho_c(s% initial_mass)
 
   if (dbg) then
-     write(*,1) 'T_c', T_c
-     write(*,1) 'rho_c', rho_c
-     write(*,1) 'L_core', L_core
+     write(*,*) 'wd_builder'
+     write(*,*)
+     write(*,1) 'T_c [K]', T_c
+     write(*,1) 'L_core/Lsun', L_core/Lsun
      write(*,1) 'mstar/Msun', mstar/Msun
+     write(*,*)
   end if
 
   wd_lrpar = 3
@@ -68,10 +75,16 @@ subroutine wd_builder(id, ierr)
   allocate(ipar(wd_lipar))
   ipar(1) = id
 
-  ! rough guess for initial central density
-  rho_c = get_rho_c(s% initial_mass)
   lnd = log(rho_c)
   dlnd = ln2
+
+  ! given a central density, build1_wd_model creates a WD with the
+  ! specified composition and temperature structure and returns the
+  ! mass.  wd_f wraps this routine and returns the relative difference
+  ! between the mass and the target mass, so we then do a root find of
+  ! wd_f in central density of to get a WD of the specified mass.
+
+  ! first, bracket the solution so that we can do a safe root find
 
   call look_for_brackets(lnd, dlnd, lnd1, lnd3, wd_f, y1, y3, &
        imax, wd_lrpar, rpar, wd_lipar, ipar, ierr)
@@ -86,8 +99,20 @@ subroutine wd_builder(id, ierr)
      return
   end if
 
-  epsx = 1d-3 ! limit for variation in lnd
-  epsy = 1d-3 ! limit for matching desired mass as fraction of total mass
+  if (dbg) then
+     write(*,*)
+     write(*,*) 'Bracketing'
+     write(*,1) 'rho_c (initial guess)', rho_c
+     write(*,1) 'm (target mass)', mstar/Msun
+     write(*,1) 'rho_c (lower bracket)', exp(lnd1)
+     write(*,1) 'rho_c (upper bracket)', exp(lnd3)
+     write(*,*)
+  end if
+
+  ! now do the root find
+
+  epsx = 1d-6 ! limit for variation in lnd
+  epsy = 1d-6 ! limit for matching desired mass as fraction of total mass
 
   lnd = safe_root(wd_f, lnd1, lnd3, y1, y3, imax, epsx, epsy, &
        wd_lrpar, rpar, wd_lipar, ipar, ierr)
@@ -105,24 +130,20 @@ subroutine wd_builder(id, ierr)
 
   if (dbg) then
      write(*,*)
-     write(*,*) 'finished wd_builder model'
+     write(*,*) 'Found root'
+     write(*,1) 'rho_c (final value)', exp(xh(s% i_lnd,nz))
      write(*,1) 'mstar1/Msun', mstar1/Msun
      write(*,1) '(mstar-mstar1)/mstar', (mstar-mstar1)/mstar
      write(*,1) 'log10(r/Rsun)', log10(exp(xh(s% i_lnR,1))/Rsun)
-     if (s% i_lum /= 0) write(*,1) 'log10(L/Lsun)', log10(xh(s% i_lum,1)/Lsun)
-     write(*,1) 'log10(Tsurf)', xh(s% i_lnT,1)/ln10
-     write(*,1) 'Tsurf', exp(xh(s% i_lnT,1))
-     write(*,*) 'nz', nz
+     write(*,1) 'log10(L/Lsun)', log10(xh(s% i_lum,1)/Lsun)
+     write(*,1) 'Tsurf (K)', exp(xh(s% i_lnT,1))
+     write(*,2) 'nz', nz
      write(*,*)
   end if
 
-  ! The following deallocations deal with arrays which were
-  ! needed in the root bracket/solve above, but will get
-  ! overwritten during the call to allocate_star_info_arrays
+  write(*,*) 'finished wd_builder model'
 
-  if (ASSOCIATED(s% xh_old)) deallocate(s% xh_old)
-  if (ASSOCIATED(s% equ1)) deallocate(s% equ1)
-  if (ASSOCIATED(s% xh_start)) deallocate(s% xh_start)
+  ! save the data associated with final root-find model
 
   call star_allocate_arrays(id, ierr)
   if (ierr /= 0) then
@@ -173,10 +194,6 @@ real(dp) function wd_f(lnd, dfdx, lrpar, rpar, lipar, ipar, ierr)
   call star_ptr(ipar(1), s, ierr)
   if (ierr /= 0) return
 
-  if (associated(s% xh)) deallocate(s% xh)
-  if (associated(s% q)) deallocate(s% q)
-  if (associated(s% dq)) deallocate(s% dq)
-
   rho_c = exp(lnd)
 
   i = 1 ! rpar(1) for mstar result
@@ -219,13 +236,12 @@ end function wd_f
 subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   use chem_def
   use eos_def
+  use kap_def
   use kap_lib
   use chem_lib
   use eos_lib, only: Radiation_Pressure
   type (star_info), pointer :: s
   real(dp), intent(in) :: T_c, rho_c, L_core
-  real(dp) :: x, z, abar, zbar, z53bar
-  real(dp), allocatable :: xa(:)
   integer, intent(out) :: nz
   real(dp), intent(out) :: mstar ! the mass of the constructed model
   integer, intent(out) :: ierr
@@ -234,27 +250,41 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   real(dp), parameter :: LOGRHO_TOL = 1E-6_dp
   real(dp), parameter :: LOGPGAS_TOL = 1E-6_dp
 
-  integer :: i, ii, k, j, i_lnd, i_lnT, i_lnR, prune, max_retries
+  integer :: i, ii, k, i_lnd, i_lnT, i_lnR, prune
   real(dp), parameter :: &
        dlogPgas = 0.01d0, q_at_nz = 1d-5
-  real(dp) :: &
-       P_surf_limit, y, logPgas, Prad, Pgas, try_dlogPgas, logPgas0, &
-       res(num_eos_basic_results), P_c, logP, m, &
-       d_eos_dlnd(num_eos_basic_results), d_eos_dlnT(num_eos_basic_results), &
-       d_eos_dabar(num_eos_basic_results), d_eos_dzbar(num_eos_basic_results), &
-       lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-       cgrav, r, rmid, rho, logRho, T, lnT, L, P, P0, dm, m0, L0, r0, lnT0, T0, &
-       rho0, rho_mid, Pmid, chiRho0, chiRho_mid, chiT0, chiT_mid, Cp0, Cp_mid, &
-       grada0, grada_mid, mmid, Tmid, Lmid, &
-       chiRho, chiT, Cp, grada, gradT, logT_surf_limit, logP_surf_limit
-  real(dp), pointer :: xh(:,:), q(:), dq(:) ! model structure info
-  real(dp), allocatable :: d_eos_dxa(:,:)
 
-  real(dp) :: opacity, kap_cond, kap_rad, dlnkap_dlnd, dlnkap_dlnT, frac_Type2
+  real(dp) :: &
+       logPgas, Prad, Pgas, logPgas0, &
+       P_c, logP, m, gradT, &
+       r, rmid, rho, logRho, T, lnT, L, P, P0, dm, m0, L0, r0, lnT0, T0, &
+       rho0, rho_mid, Pmid, chiRho0, chiRho_mid, chiT0, chiT_mid, Cp0, Cp_mid, &
+       grada0, grada_mid, mmid, Tmid, Lmid
+
+  real(dp), pointer :: xh(:,:), q(:), dq(:) ! model structure info
+  real(dp), allocatable :: xa(:)
+
+  ! composition information
+  integer :: species
+  real(dp) :: x, y, z, abar, zbar, z53bar, z2bar, ye, mass_correction, sumx
   real(dp) :: XC, XN, XO, XNe
 
-  real(dp) :: z2bar, ye, mass_correction, sumx
-  integer :: species
+  ! eos results
+  real(dp), dimension(num_eos_basic_results) :: res, d_eos_dlnd, d_eos_dlnT
+  real(dp), allocatable :: d_eos_dxa(:,:)
+  real(dp) :: lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
+       eta, d_eta_dlnRho, d_eta_dlnT, &
+       chiRho, chiT, Cp, grada
+
+  ! kap results
+  real(dp) :: opacity, kap_cond, kap_rad, dlnkap_dlnd, dlnkap_dlnT
+  real(dp) :: dlnkap_dxa(s% species)
+  real(dp) :: kap_fracs(num_kap_fracs)
+
+  ! limits
+  real(dp) :: logT_surf_limit, logP_surf_limit, logRho_surf_limit
+
+  real(dp), parameter :: cgrav = standard_cgrav
 
   logical, parameter :: dbg = .false.
 
@@ -262,36 +292,28 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
   ierr = 0
 
+  ! set limits
+
   logP_surf_limit = 8d0
-  P_surf_limit = exp10(logP_surf_limit)
   if (dbg) write(*,1) 'logP_surf_limit', logP_surf_limit
 
   logT_surf_limit = 4d0
   if (dbg) write(*,1) 'logT_surf_limit', logT_surf_limit
 
+  logRho_surf_limit = -12d0
+  if (dbg) write(*,1) 'logRho_surf_limit', logRho_surf_limit
+
   i_lnd = s% i_lnd
   i_lnT = s% i_lnT
   i_lnR = s% i_lnR
 
-  if (i_lnd == 0) then
-     write(*,*) 'Sorry: require lnPgas_flag be .false. for build1_wd_model'
-     ierr = -1
-     return
-  end if
-
-  if (i_lnT == 0) then
-     write(*,*) 'Sorry: require E_flag be .false. for build1_wd_model'
-     ierr = -1
-     return
-  end if
-
-  cgrav = standard_cgrav
-
   allocate(xa(s% species))
   allocate(d_eos_dxa(num_eos_d_dxa_results, s% species))
 
-  call wd_builder_get_xa(s, 0d0, xa)
 
+  ! set composition and evaluate EOS at center
+
+  call wd_builder_get_xa(s, 0d0, xa)
   call set_composition_info
 
   call star_get_eos( &
@@ -324,9 +346,9 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   ! density at nz
   logRho_guess = log10(rho_c)
   call star_solve_eos_given_PgasT( &
-       s% id, 0, z, xa(s% net_iso(ih1)), abar, zbar, xa, &
+       s% id, 0, xa, &
        lnT/ln10, log10(Pgas), logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
-       logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
+       logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dxa, &
        ierr)
   if (ierr /= 0) return
   rho = exp10(logRho)
@@ -334,14 +356,13 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
   r = pow(m/(pi4*rho/3),one_third) ! radius at nz
 
-  y = 1 - (x+z)
-
   L = L_core * (m/mstar)
 
   call kap_get( &
-       s% kap_handle, zbar, X, Z, XC, XN, XO, XNe, log10(rho), log10(T), &
+       s% kap_handle, s% species, s% chem_id, s% net_iso, xa, log10(rho), log10(T), &
        lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-       frac_Type2, opacity, dlnkap_dlnd, dlnkap_dlnT, ierr)
+       eta, d_eta_dlnRho, d_eta_dlnT, &
+       kap_fracs, opacity, dlnkap_dlnd, dlnkap_dlnT, dlnkap_dxa, ierr)
 
   if (ierr /= 0) then
      write(*,*) 'failed in kap_get'
@@ -349,13 +370,15 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   end if
 
   call eval_gradT( &
-       s, zbar, x, y, xa, rho, m, mstar, r, T, lnT, L, P, &
-       chiRho, chiT, Cp, opacity, grada, &
-       lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-       gradT, ierr )
+       s, xa, m, &
+       r, T, L, P, opacity, rho, chiRho, chiT, Cp, grada, &
+       gradT, ierr)
   if (ierr /= 0) return
 
 
+  if (associated(s% xh)) deallocate(s% xh)
+  if (associated(s% q)) deallocate(s% q)
+  if (associated(s% dq)) deallocate(s% dq)
 
   allocate(xh(s% nvar_hydro,nz), q(nz), dq(nz), stat=ierr)
   if (ierr /= 0) return
@@ -366,18 +389,16 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
   xh(i_lnd, nz) = logRho*ln10
   xh(i_lnT, nz) = lnT
   xh(i_lnR, nz) = log(r)
-  if (s% i_lum /= 0) xh(s% i_lum,nz) = L
+  xh(s% i_lum,nz) = L
 
   q(nz) = q_at_nz
   dq(nz) = q_at_nz
 
   if (dbg) write(*,*) 'nz', nz
 
-  max_retries = 10
   prune = 0
   step_loop: do k = nz-1, 1, -1
 
-     try_dlogPgas = dlogPgas
      logPgas0 = logPgas
      P0 = P
      m0 = m
@@ -394,133 +415,130 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
      if (dbg) write(*,3) 'step', k, nz, logPgas0
 
-     retry_loop: do j = 1, max_retries
+     logPgas = logPgas0 - dlogPgas
+     Pgas = exp10(logPgas)
 
-        logPgas = logPgas0 - try_dlogPgas
-        Pgas = exp10(logPgas)
+     ! these inner i & ii loops follow the same approach as the pre-main-sequence builder
 
-        if (j > 1) write(*,2) 'retry', j, logPgas
+     do i = 1, 2
 
-        do i = 1, 2
+        Prad = Radiation_Pressure(T)
+        P = Pgas + Prad
 
-           Prad = Radiation_Pressure(T)
-           P = Pgas + Prad
+        rho_mid = (rho+rho0)/2
 
-           rho_mid = (rho+rho0)/2
-
-           do ii = 1, 10 ! repeat to get hydrostatic balance
-              rmid = pow((r*r*r + r0*r0*r0)/2,one_third)
-              mmid = (m + m0)/2
-              if (ii == 10) exit
-              dm = -pi4*pow4(rmid)*(P-P0)/(cgrav*mmid)
-              m = m0 + dm ! mass at point k
-              r = pow(r0*r0*r0 + dm/((4*pi/3)*rho_mid),one_third)
-              if (dbg) write(*,2) 'r', ii, r, m, dm
-           end do
-
-           L = L0 + dm*(L_core/mstar) ! luminosity at point k
-           Lmid = (L0+L)/2
-
-           Pmid = (P+P0)/2
-
-           chiRho_mid = (chiRho0 + chiRho)/2
-           chiT_mid = (chiT0 + chiT)/2
-           Cp_mid = (Cp0 + Cp)/2
-           grada_mid = (grada0 + grada)/2
-
-           do ii = 1, 2
-              Tmid = (T+T0)/2
-
-              call wd_builder_get_xa(s, m/mstar, xa)
-
-              call set_composition_info
-
-              call kap_get( &
-                   s% kap_handle, zbar, X, Z, XC, XN, XO, XNe, log10(rho_mid), log10(Tmid), &
-                   lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-                   frac_Type2, opacity, dlnkap_dlnd, dlnkap_dlnT, ierr)
-              if (ierr /= 0) then
-                 write(*,*) 'failed in kap_get'
-                 return
-              end if
-
-              call kap_get_elect_cond_opacity( &
-                   zbar, log10(rho_mid), log10(Tmid), &
-                   kap_cond, dlnkap_dlnd, dlnkap_dlnT, ierr)
-
-              kap_rad = 1d0/(1d0/opacity - 1d0/kap_cond)
-
-              if (kap_cond .lt. kap_rad) then ! suggested by Evan
-                 call eval_gradT( &
-                      s, zbar, x, y, xa, rho_mid, mmid, mstar, rmid, Tmid, log(Tmid), Lmid, Pmid, &
-                      chiRho_mid, chiT_mid, Cp_mid, opacity, grada_mid, &
-                      lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-                      gradT, ierr )
-                 if (ierr /= 0) return
-              else
-                 gradT = 0.235 ! suggested by Lars
-              end if
-
-              T = T0 + Tmid*gradT*(P-P0)/Pmid
-              lnT = log(T)
-              if (dbg) write(*,2) 'T', ii, T
-           end do
-
-           if (i == 2) exit
-
-           logRho_guess = logRho
-           call star_solve_eos_given_PgasT( &
-                s% id, 0, z, x, abar, zbar, xa, &
-                lnT/ln10, logPgas, logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
-                logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dabar, d_eos_dzbar, &
-                ierr)
-           rho = exp10(logRho)
-           if (ierr /= 0) return
-           call unpack_eos_results
-
+        do ii = 1, 10 ! repeat to get hydrostatic balance
+           rmid = pow((r*r*r + r0*r0*r0)/2,one_third)
+           mmid = (m + m0)/2
+           if (ii == 10) exit
+           dm = -pi4*pow4(rmid)*(P-P0)/(cgrav*mmid)
+           m = m0 + dm ! mass at point k
+           r = pow(r0*r0*r0 + dm/((4*pi/3)*rho_mid),one_third)
+           if (dbg) write(*,2) 'r', ii, r, m, dm
         end do
 
-        if (lnT <= logT_surf_limit*ln10) then
-           if (dbg) write(*,*) 'have reached lgT_surf_limit', lnT/ln10, logT_surf_limit
-           prune = k
-           exit step_loop
-        end if
+        L = L0 + dm*(L_core/mstar) ! luminosity at point k
+        Lmid = (L0+L)/2
 
-        if (P <= P_surf_limit) then
-           if (dbg) write(*,1) 'have reached P_surf limit', P, P_surf_limit
-           prune = k
-           exit step_loop
-        end if
+        Pmid = (P+P0)/2
 
-        if (logRho <= -12) then
-           if (dbg) write(*,1) 'have reached logRho_surf limit', logRho, -12d0
-           prune = k
-           exit step_loop
-        end if
+        chiRho_mid = (chiRho0 + chiRho)/2
+        chiT_mid = (chiT0 + chiT)/2
+        Cp_mid = (Cp0 + Cp)/2
+        grada_mid = (grada0 + grada)/2
 
+        call wd_builder_get_xa(s, m/mstar, xa)
+        call set_composition_info
 
-        xh(i_lnd, k) = logRho*ln10
-        xh(i_lnT, k) = lnT
-        xh(i_lnR, k) = log(r)
-        if (s% i_lum /= 0) xh(s% i_lum,k) = L
-        q(k) = m/mstar
-        dq(k) = dm/mstar
+        do ii = 1, 2
+           Tmid = (T+T0)/2
 
-        if (dbg) then
-           write(*,2) 'xh(i_lnd, k)', k, xh(i_lnd, k)
-           write(*,2) 'xh(i_lnT, k)', k, xh(i_lnT, k)
-           write(*,2) 'xh(i_lnR, k)', k, xh(i_lnR, k)
-           write(*,2) 'L', k, L
-           write(*,2) 'q(k)', k, q(k)
-           write(*,2) 'dq(k)', k, dq(k)
-        end if
+           call kap_get( &
+                s% kap_handle, s% species, s% chem_id, s% net_iso, xa, log10(rho_mid), log10(Tmid), &
+                lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
+                eta, d_eta_dlnRho, d_eta_dlnT, &
+                kap_fracs, opacity, dlnkap_dlnd, dlnkap_dlnT, dlnkap_dxa, ierr)
+           if (ierr /= 0) then
+              write(*,*) 'failed in kap_get'
+              return
+           end if
 
-        exit retry_loop
+           call kap_get_elect_cond_opacity(s% kap_handle, &
+                zbar, log10(rho_mid), log10(Tmid), &
+                kap_cond, dlnkap_dlnd, dlnkap_dlnT, ierr)
 
-     end do retry_loop
+           kap_rad = 1d0/(1d0/opacity - 1d0/kap_cond)
+
+           if (kap_cond .lt. kap_rad) then ! suggested by Evan
+              call eval_gradT( &
+                   s, xa, mmid, &
+                   rmid, Tmid, Lmid, Pmid, opacity, rho_mid, &
+                   chiRho_mid, chiT_mid, Cp_mid, grada_mid, &
+                   gradT, ierr )
+              if (ierr /= 0) return
+           else
+              gradT = 0.235 ! suggested by Lars
+           end if
+
+           T = T0 + Tmid*gradT*(P-P0)/Pmid
+           lnT = log(T)
+           if (dbg) write(*,2) 'T', ii, T
+        end do
+
+        if (i == 2) exit
+
+        logRho_guess = logRho
+        call star_solve_eos_given_PgasT( &
+             s% id, 0, xa, &
+             lnT/ln10, logPgas, logRho_guess, LOGRHO_TOL, LOGPGAS_TOL, &
+             logRho, res, d_eos_dlnd, d_eos_dlnT, d_eos_dxa, &
+             ierr)
+        rho = exp10(logRho)
+        if (ierr /= 0) return
+        call unpack_eos_results
+
+     end do
+
+     ! check limits
+
+     if (lnT/ln10 <= logT_surf_limit) then
+        if (dbg) write(*,*) 'have reached logT_surf_limit', lnT/ln10, logT_surf_limit
+        prune = k
+        exit step_loop
+     end if
+
+     if (log10(P) <= logP_surf_limit) then
+        if (dbg) write(*,1) 'have reached logP_surf limit', log10(P), logP_surf_limit
+        prune = k
+        exit step_loop
+     end if
+
+     if (logRho <= logRho_surf_limit) then
+        if (dbg) write(*,1) 'have reached logRho_surf limit', logRho, logRho_surf_limit
+        prune = k
+        exit step_loop
+     end if
+
+     ! save data for cell k
+     xh(i_lnd, k) = logRho*ln10
+     xh(i_lnT, k) = lnT
+     xh(i_lnR, k) = log(r)
+     xh(s% i_lum,k) = L
+     q(k) = m/mstar
+     dq(k) = dm/mstar
+
+     if (dbg) then
+        write(*,2) 'xh(i_lnd, k)', k, xh(i_lnd, k)
+        write(*,2) 'xh(i_lnT, k)', k, xh(i_lnT, k)
+        write(*,2) 'xh(i_lnR, k)', k, xh(i_lnR, k)
+        write(*,2) 'L', k, L
+        write(*,2) 'q(k)', k, q(k)
+        write(*,2) 'dq(k)', k, dq(k)
+     end if
 
   end do step_loop
 
+  ! reduce to the actual number of zones we needed
   if (prune > 0) then ! move stuff and reduce nz
      if (dbg) write(*,*) 'prune', prune
      do k=1,nz-prune
@@ -535,12 +553,13 @@ subroutine build1_wd_model(s, T_c, rho_c, L_core, nz, mstar, ierr)
 
   mstar = m ! actual total mass
 
-  call star_normalize_dqs(nz, dq, ierr)
+  ! clean up the qs and dqs
+  call star_normalize_dqs(s% id, nz, dq, ierr)
   if (ierr /= 0) then
      if (s% report_ierr) write(*,*) 'set_qs failed in pre ms model'
      return
   end if
-  call star_set_qs(nz, q, dq, ierr)
+  call star_set_qs(s% id, nz, q, dq, ierr)
   if (ierr /= 0) then
      if (s% report_ierr) write(*,*) 'set_qs failed in pre ms model'
      return
@@ -570,132 +589,79 @@ contains
     lnfree_e = res(i_lnfree_e)
     d_lnfree_e_dlnRho = d_eos_dlnd(i_lnfree_e)
     d_lnfree_e_dlnT = d_eos_dlnT(i_lnfree_e)
+    eta = res(i_eta)
+    d_eta_dlnRho = d_eos_dlnd(i_eta)
+    d_eta_dlnT = d_eos_dlnT(i_eta)
   end subroutine unpack_eos_results
 
 
 end subroutine build1_wd_model
 
 
+! get an estimate for gradT from MLT
 subroutine eval_gradT( &
-     s, zbar, x, y, xa, rho, m, mstar, r, T, lnT, L, P, &
-     chiRho, chiT, Cp, opacity, grada, &
-     lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-     gradT, ierr )
+     s, xa, m, &
+     r, T, L, P, opacity, rho, chiRho, chiT, Cp, grada, &
+     gradT, ierr)
   use chem_def, only: ih1
-  use kap_lib, only : kap_get
+  use auto_diff
+  use eos_lib, only: Radiation_Pressure
 
   type (star_info), pointer :: s
-  real(dp), intent(in) :: &
-       zbar, x, y, xa(:), rho, m, mstar, r, T, lnT, L, P, &
-       chiRho, chiT, Cp, opacity, grada, &
-       lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT
+  real(dp), intent(in) :: xa(:), m, &
+       r, T, L, P, opacity, rho, chiRho, chiT, Cp, grada
   real(dp), intent(out) :: gradT
   integer, intent(out) :: ierr
 
-  real(dp) :: Z, XC, XN, XO, XNe, frac_Type2
+  ! mlt inputs
+  character (len=16) :: MLT_option
+  integer :: iso
+  real(dp) :: X, gradr, scale_height, &
+       gradL_composition_term, mixing_length_alpha
 
-  real(dp) :: &
-       cgrav, Cv, csound, &
-       prev_conv_vel, max_conv_vel, dt, gradL_composition_term, tau
+  ! mlt outputs
   integer :: mixing_type
-  real(dp) :: mlt_basics(num_mlt_results)
-  real(dp), target :: mlt_partials1_ary(num_mlt_partials*num_mlt_results)
-  real(dp), pointer :: mlt_partials1(:), mlt_partials(:,:)
-  real(dp), parameter :: alpha_semiconvection = 0, thermohaline_coeff = 0, &
-       gradr_factor = 1, d_gradr_factor_dw = 0
-  real(dp) :: alfa, beta, &
-       normal_mlt_gradT_factor, &
-       T_00, T_m1, rho_00, rho_m1, P_00, P_m1, &
-       chiRho_for_partials_00, chiT_for_partials_00, &
-       chiRho_for_partials_m1, chiT_for_partials_m1, &
-       chiRho_00, d_chiRho_00_dlnd, d_chiRho_00_dlnT, &
-       chiRho_m1, d_chiRho_m1_dlnd, d_chiRho_m1_dlnT, &
-       chiT_00, d_chiT_00_dlnd, d_chiT_00_dlnT, &
-       chiT_m1, d_chiT_m1_dlnd, d_chiT_m1_dlnT, &
-       Cp_00, d_Cp_00_dlnd, d_Cp_00_dlnT, &
-       Cp_m1, d_Cp_m1_dlnd, d_Cp_m1_dlnT, &
-       opacity_00, d_opacity_00_dlnd, d_opacity_00_dlnT, &
-       opacity_m1, d_opacity_m1_dlnd, d_opacity_m1_dlnT, &
-       grada_00, d_grada_00_dlnd, d_grada_00_dlnT, &
-       grada_m1, d_grada_m1_dlnd, d_grada_m1_dlnT
-  normal_mlt_gradT_factor = 1d0
+  real(dp) :: Y_face, conv_vel, D, Gamma
+
+  real(dp), parameter :: cgrav = standard_cgrav
 
   ierr = 0
-  mlt_partials1 => mlt_partials1_ary
-  mlt_partials(1:num_mlt_partials,1:num_mlt_results) => &
-       mlt_partials1(1:num_mlt_partials*num_mlt_results)
 
-  cgrav = standard_cgrav
+  ! set passed values; don't care about derivatives
+  gradr = P*opacity*L/(16d0*pi*clight*m*cgrav*Radiation_Pressure(T))
+  scale_height = P/((cgrav*m/(r*r))*rho)
+
+  ! set some mixing options
+  ! details are irrelevant, so just pick something simple
+  MLT_option = 'Henyey'
   gradL_composition_term = 0
-  Cv = Cp
-  tau = 1
-  prev_conv_vel = -1
-  max_conv_vel = 1d99
-  dt = -1
-  csound = 0 ! not used when dt <= 0
-  ! not used
-  alfa=0d0; beta=0d0;
-  T_00=0d0; T_m1=0d0; rho_00=0d0; rho_m1=0d0; P_00=0d0; P_m1=0d0
-  chiRho_for_partials_00=0d0; chiT_for_partials_00=0d0
-  chiRho_for_partials_m1=0d0; chiT_for_partials_m1=0d0
-  chiRho_00=0d0; d_chiRho_00_dlnd=0d0; d_chiRho_00_dlnT=0d0
-  chiRho_m1=0d0; d_chiRho_m1_dlnd=0d0; d_chiRho_m1_dlnT=0d0
-  chiT_00=0d0; d_chiT_00_dlnd=0d0; d_chiT_00_dlnT=0d0
-  chiT_m1=0d0; d_chiT_m1_dlnd=0d0; d_chiT_m1_dlnT=0d0
-  Cp_00=0d0; d_Cp_00_dlnd=0d0; d_Cp_00_dlnT=0d0
-  Cp_m1=0d0; d_Cp_m1_dlnd=0d0; d_Cp_m1_dlnT=0d0
-  opacity_00=0d0; d_opacity_00_dlnd=0d0; d_opacity_00_dlnT=0d0
-  opacity_m1=0d0; d_opacity_m1_dlnd=0d0; d_opacity_m1_dlnT=0d0
-  grada_00=0d0; d_grada_00_dlnd=0d0; d_grada_00_dlnT=0d0
-  grada_m1=0d0; d_grada_m1_dlnd=0d0; d_grada_m1_dlnT=0d0
+  mixing_length_alpha = 1.8
+  iso = ih1 ! doesn't matter since no thermohaline
+  X = xa(ih1)
 
-  call star_mlt_eval( &
-       s% id, 0, cgrav, m, mstar, r, L, x, T, rho, P, &
-       chiRho, chiT, Cp, opacity, grada, &
-
-                                ! not used
-       alfa, beta, &
-       T_00, T_m1, rho_00, rho_m1, P_00, P_m1, &
-       chiRho_for_partials_00, chiT_for_partials_00, &
-       chiRho_for_partials_m1, chiT_for_partials_m1, &
-       chiRho_00, d_chiRho_00_dlnd, d_chiRho_00_dlnT, &
-       chiRho_m1, d_chiRho_m1_dlnd, d_chiRho_m1_dlnT, &
-       chiT_00, d_chiT_00_dlnd, d_chiT_00_dlnT, &
-       chiT_m1, d_chiT_m1_dlnd, d_chiT_m1_dlnT, &
-       Cp_00, d_Cp_00_dlnd, d_Cp_00_dlnT, &
-       Cp_m1, d_Cp_m1_dlnd, d_Cp_m1_dlnT, &
-       opacity_00, d_opacity_00_dlnd, d_opacity_00_dlnT, &
-       opacity_m1, d_opacity_m1_dlnd, d_opacity_m1_dlnT, &
-       grada_00, d_grada_00_dlnd, d_grada_00_dlnT, &
-       grada_m1, d_grada_m1_dlnd, d_grada_m1_dlnT, &
-
-       gradr_factor, d_gradr_factor_dw, gradL_composition_term, &
-       alpha_semiconvection, s% semiconvection_option, &
-       thermohaline_coeff, s% thermohaline_option, ih1, &
-       s% mixing_length_alpha, s% alt_scale_height_flag, s% remove_small_D_limit, &
-       s% MLT_option, s% Henyey_MLT_y_param, s% Henyey_MLT_nu_param, &
-       normal_mlt_gradT_factor, &
-       prev_conv_vel, max_conv_vel, s% mlt_accel_g_theta, dt, tau, .false., &
-       mixing_type, mlt_basics, mlt_partials1, ierr)
-  if (ierr /= 0) return
-
-  gradT = mlt_basics(mlt_gradT) ! actual temperature gradient dlnT/dlnP
+  call star_mlt_gradT(s% id, MLT_option, &
+       r, L, T, P, opacity, rho, chiRho, chiT, Cp, gradr, grada, scale_height, &
+       iso, X, cgrav, m, gradL_composition_term, mixing_length_alpha, &
+       mixing_type, gradT, Y_face, conv_vel, D, Gamma, ierr)
 
 end subroutine eval_gradT
 
 
 ! estimate central density of a WD as a function of mass
+! this doesn't need to be a great guess, just vaguely reasonable
 real(dp) function get_rho_c(m)
   real(dp), intent(in) :: m
   real(dp), parameter, dimension(5) :: ms = (/0.15, 0.40, 0.82, 1.37, 1.43/)
   real(dp), parameter, dimension(5) :: logRhos = (/5.0, 6.0, 7.0, 8.0, 9.0/)
   integer :: k
 
+  ! less than min ms
   if (m < ms(1)) then
      get_rho_c = exp10(logRhos(1))
      return
   end if
 
+  ! simple log-linear interpolation
   do k = 1, 4
      if (m < ms(k+1)) then
         get_rho_c = exp10(logRhos(k) + (m - ms(k)) / (ms(k+1) - ms(k)))
@@ -703,6 +669,7 @@ real(dp) function get_rho_c(m)
      end if
   end do
 
+  ! greater than max ms
   get_rho_c = exp10(logRhos(5))
 
 end function get_rho_c

@@ -29,7 +29,7 @@
                 shearsmooth = shearsmooth + (1d0/(2d0*nsmooth+1d0))*( s% omega_shear(k-j) + s% omega_shear(k+j) )
             end do
 
-            diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) !Magnetic diffusivity
+            diffm =  diffmag(s, s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) !Magnetic diffusivity
             difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k)) !Thermal diffusivity
             omegaa = s% omega(k)*pow(shearsmooth*s% omega(k)/sqrt(abs(s% brunt_N2(k))),1d0/3d0) !Alfven frequency at saturation, assuming adiabatic instability
             omegat = difft*pow2(sqrt(abs(s% brunt_N2(k)))/(omegaa*s% r(k))) !Thermal damping rate assuming adiabatic instability
@@ -64,7 +64,7 @@
             nu_tsf_t=1d-30
             shearsmooth = shearsmooth
 
-            diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) !Magnetic diffusivity
+            diffm =  diffmag(s, s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) !Magnetic diffusivity
             difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k)) !Thermal diffusivity
             omegaa = s% omega(k)*pow(shearsmooth*s% omega(k)/sqrt(abs(s% brunt_N2(k))),1d0/3d0) !Alfven frequency at saturation, assuming adiabatic instability
             omegat = difft*pow2(sqrt(abs(s% brunt_N2(k)))/(s% omega(k)*s% r(k))) !Thermal damping rate assuming adiabatic instability
@@ -97,7 +97,7 @@
         nu_tsf_t=1d-30
         shearsmooth = shearsmooth
 
-        diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) !Magnetic diffusivity
+        diffm =  diffmag(s, s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) !Magnetic diffusivity
         difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k)) !Thermal diffusivity
         omegaa = s% omega(k)*pow(shearsmooth*s% omega(k)/sqrt(abs(s% brunt_N2(k))),1d0/3d0) !Alfven frequency at saturation, assuming adiabatic instability
         omegat = difft*pow2(sqrt(abs(s% brunt_N2(k)))/(s% omega(k)*s% r(k))) !Thermal damping rate assuming adiabatic instability
@@ -305,7 +305,7 @@
             end do
             shearsmooth = vals(k,2)
 
-                    diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) 
+                    diffm =  diffmag(s, s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err)
             difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k))
             vals(k,5) = diffm
             vals(k,6) =  safe_log10(vals(k,5))
@@ -344,7 +344,7 @@
             nu_tsf=1d-30
             nu_tsf_t=1d-30
 
-            diffm =  diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) 
+            diffm =  diffmag(s,s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err)
             difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k))
             vals(k,5) = diffm
             vals(k,6) = safe_log10(vals(k,5))
@@ -383,7 +383,7 @@
             nu_tsf=1d-30
             nu_tsf_t=1d-30
 
-            diffm = diffmag(s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err) 
+            diffm = diffmag(s, s% rho(k),s% T(k),s% abar(k),s% zbar(k),op_err)
             difft = 16d0*5.67d-5*pow3(s% T(k))/(3d0*s% opacity(k)*pow2(s% rho(k))*s% Cv(k))
             vals(k,5) = diffm
             vals(k,6) =  safe_log10(vals(k,5))
@@ -460,18 +460,26 @@
 
 
 
-      real(dp) function diffmag(rho,T,abar,zbar,ierr)
+      real(dp) function diffmag(s,rho,T,abar,zbar,ierr)
 
          ! Written by S.-C. Yoon, Oct. 10, 2003
          ! Electrical conductivity according to Spitzer 1962
          ! See also Wendell et al. 1987, ApJ 313:284
+
+         use kap_lib, only: kap_get_elect_cond_opacity
+
+         type (star_info), pointer :: s
          real(dp), intent(in) :: rho, T, abar, zbar
          integer, intent(out) :: ierr
          real(dp) :: xmagfmu, xmagft, xmagfdif, xmagfnu, &
             xkap, xgamma, xlg, xsig1, xsig2, xsig3, xxx, ffff, xsig, &
-            xeta
+            xeta, kap_cond, dlnkap_dlnRho, dlnkap_dlnT
     
         if (ierr /= 0) return
+
+        call kap_get_elect_cond_opacity( &
+           s% kap_handle, zbar, log10(rho), log10(T),  &
+           kap_cond, dlnkap_dlnRho, dlnkap_dlnT, ierr)
 
         xgamma = 0.2275d0*zbar*zbar*pow(rho*1d-6/abar,1d0/3d0)*1d8/T
         xlg = log10(xgamma)
@@ -483,19 +491,19 @@
             ffff = 0.25d0*(2d0-3d0*xxx + xxx*xxx*xxx)
             xsig1 = sige1(zbar,T,xgamma)
             
-            xsig2 = sige2(T,rho,zbar,ierr)
+            xsig2 = sige2(T,rho,kap_cond,ierr)
             if (ierr /= 0) return
       
             xsig = (1d0-ffff)*xsig2 + ffff*xsig1
         else if (xlg > 0d0 .and. xlg < 0.5d0) then
-            xsig2 = sige2(T,rho,zbar,ierr)
+            xsig2 = sige2(T,rho,kap_cond,ierr)
             if (ierr /= 0) return
 
             xsig = xsig2
         else if (xlg >= 0.5d0 .and. xlg < 1d0) then
             xxx = (xlg-0.75d0)*4d0
             ffff = 0.25d0*(2d0-3d0*xxx + xxx*xxx*xxx)
-            xsig2 = sige2(T,rho,zbar,ierr)
+            xsig2 = sige2(T,rho,kap_cond,ierr)
             if (ierr /= 0) return
 
             xsig3 = sige3(zbar,T,xgamma)
@@ -530,18 +538,13 @@
       end function sige1
 
 
-      real(dp) function sige2(T,rho,zbar,ierr)
+      real(dp) function sige2(T,rho,kap_cond,ierr)
          ! writen by S.-C. YOON Oct. 10, 2003
          ! electrical conductivity using conductive opacity
          ! see Wendell et al. 1987 ApJ 313:284
-         use kap_lib, only: kap_get_elect_cond_opacity
-         real(dp), intent(in) :: t,rho,zbar
+         real(dp), intent(in) :: t,rho,kap_cond
          integer, intent(out) :: ierr
-         real(dp) :: kap, dlnkap_dlnRho, dlnkap_dlnT
-         call kap_get_elect_cond_opacity( &
-            zbar, log10(rho), log10(T),  &
-            kap, dlnkap_dlnRho, dlnkap_dlnT, ierr)
-         sige2 = 1.11d9*T*T/(rho*kap)
+         sige2 = 1.11d9*T*T/(rho*kap_cond)
       end function sige2
 
       real(dp) function sige3(z,t,xgamma)

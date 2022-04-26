@@ -8,6 +8,6 @@ hooks/enhanced_Tayler_Spruit @adamjermyn
 hooks/hydro_Ttau @warrickball
 hooks/low_mass_torques @adamjermyn
 hooks/remove_surface_by_temperature @adamjermyn
-hooks/wd_builder @jschwab
+hooks/wd_builder @evbauer @fxt
 hooks/atm_T_tau_gradr_factor.f90 @warrickball
 hooks/cmd_line_args.py @warrickball

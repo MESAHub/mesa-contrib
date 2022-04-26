@@ -51,22 +51,22 @@
                ! Figure out how massive the top convection zone is
                net_I = 0d0
                do k=1,k_end   
-                  net_I = net_I + s% i_rot(k) * s% dm(k) 
+                  net_I = net_I + s% i_rot(k)%val * s% dm(k)
                end do
 
                ! Distribute Jdot
                do k=1,k_end
-                  s% extra_jdot(k) = -jdot * s% i_rot(k) * s% dm(k)  / net_I
+                  s% extra_jdot(k) = -jdot * s% i_rot(k)%val * s% dm(k)  / net_I
                end do
             else if (wind_distribution_option == 2) then
                ! Distribute jdot proportional to i_rot in the whole star
                net_I = 0d0
                do k=1,s% nz
-                  net_I = net_I + s% i_rot(k) * s% dm(k) 
+                  net_I = net_I + s% i_rot(k)%val * s% dm(k)
                end do
 
                do k=1,s% nz   
-                  s% extra_jdot(k) = -jdot * s% i_rot(k) * s% dm(k) / net_I
+                  s% extra_jdot(k) = -jdot * s% i_rot(k)%val * s% dm(k) / net_I
                end do
             end if
    
@@ -136,10 +136,10 @@
             if (s% tau(j) > tau23) then
                if (j == 1) then
                   ! Extrapolate
-                  p_tau = s% p(1) * tau23 / s%tau(1)
+                  p_tau = s% peos(1) * tau23 / s%tau(1)
                else
                   ! Interpolate
-                  p_tau = (s% p(j) * (s% tau(j) - tau23) + s% p(j-1) *(tau23 - s% tau(j-1))) &
+                  p_tau = (s% peos(j) * (s% tau(j) - tau23) + s% peos(j-1) *(tau23 - s% tau(j-1))) &
                            / (s%tau(j) -  s% tau(j-1))
                end if
                exit ! Leave the loop

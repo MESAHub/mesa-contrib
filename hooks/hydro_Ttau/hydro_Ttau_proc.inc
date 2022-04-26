@@ -37,7 +37,7 @@
          if (ierr /= 0) return
 
          Teff = s% Teff
-         grv = exp10(s% log_surface_gravity) ! exp10(4.438d0) 
+         grv = exp10(s% photosphere_logg) ! exp10(4.438d0)
          call get_qhpf(s% Teff, grv, alpha, ierr)
          s% mixing_length_alpha = alpha*s% x_ctrl(1)
          s% tau_base = tau_base_hydro_Ttau
@@ -83,7 +83,7 @@
 
 
        subroutine hydro_Ttau_surface_PT( &
-            id, skip_partials, Teff, &
+            id, skip_partials, &
             lnT, dlnT_dL, dlnT_dlnR, dlnT_dlnM, dlnT_dlnkap, &
             lnP, dlnP_dL, dlnP_dlnR, dlnP_dlnM, dlnP_dlnkap, &
             ierr)
@@ -93,7 +93,6 @@
          integer, intent(in) :: id ! star id if available; 0 otherwise
          logical, intent(in) :: skip_partials
 
-         real(dp), intent(out) :: Teff ! temperature at photosphere
          real(dp), intent(out) :: lnT ! natural log of temperature at base of atmosphere
          real(dp), intent(out) :: lnP ! natural log of pressure at base of atmosphere (Pgas + Prad)
          
@@ -103,10 +102,7 @@
 
          integer, intent(out) :: ierr  ! == 0 means AOK
 
-         real(dp) :: L, R, M, kap
-         real(dp) :: phot_r, phot_m, phot_v, phot_L, phot_cs, &
-              phot_kap, phot_ysum
-         integer :: k_phot
+         real(dp) :: L, R, M, kap, Teff
 
          type (star_info), pointer :: s
          real(dp) :: tau, Pextra_factor, g
@@ -119,12 +115,8 @@
          M = s% M(1)
 
          kap = s% opacity(1)
-
-         call get_phot_info(s, phot_r, phot_m, phot_v, &
-              phot_L, phot_cs, phot_kap, phot_ysum, k_phot)
-         
          tau = s% tau_base*s% tau_factor
-         Teff = atm_Teff(L, phot_r)
+         Teff = s% Teff
          Pextra_factor = 1d0 ! 0d0
          g = s% cgrav(1)*M/(R*R)
 
@@ -495,69 +487,3 @@
         call eval_qhpf(ntau, logtau, qhpf_out, dqhpf_out, ierr)
         dqhpf_out = dqhpf_out/log(10d0)/tau
       end subroutine eval_qhpf_tau
-
-      
-      ! cloned from $MESA_DIR/star/private.star_utils.f90:868-930
-      subroutine get_phot_info(s, r, m, v, L, cs, kap, ysum, k_phot)
-         type (star_info), pointer :: s
-         real(dp), intent(out) :: r, m, v, L, cs, kap, ysum
-         integer, intent(out) :: k_phot
-
-         integer :: k
-         real(dp) :: tau00, taup1, dtau, r003, rp13, r3, tau_phot
-
-         include 'formats'
-
-         tau00 = 0
-         taup1 = 0
-         ysum = 0
-         r = s% r(1)
-         m = s% m(1)
-
-         L = s% L(1)
-         if (s% u_flag) then
-            v = s% u(1)
-         else if (s% v_flag) then
-            v = s% v(1)
-         else
-            v = 0d0
-         end if
-         cs = s% csound(1)
-         kap = s% opacity(1)
-         
-         k_phot = 1
-         tau_phot = s% tau_base
-         tau00 = s% tau_factor*tau_phot
-         if (tau00 >= tau_phot) return
-         do k = 1, s% nz-1
-            dtau = s% dm(k)*s% opacity(k)/(4*pi*s% rmid(k)*s% rmid(k))
-            taup1 = tau00 + dtau
-            ysum = ysum + s% rho(k)*(s% r(k) - s% r(k+1))
-            if (taup1 >= tau_phot .and. dtau > 0d0) then
-               r003 = s% r(k)*s% r(k)*s% r(k)
-               rp13 = s% r(k+1)*s% r(k+1)*s% r(k+1)
-               r3 = r003 + (rp13 - r003)*(tau_phot - tau00)/dtau
-               r = pow(r3,1d0/3d0)
-               m = s% m(k) - s% dm(k)*(tau_phot - tau00)/dtau
-               if (s% u_flag) then
-                  v = s% u_face(k) + &
-                     (s% u_face(k+1) - s% u_face(k))*(tau_phot - tau00)/dtau
-               else if (s% v_flag) then
-                  v = s% v(k) + (s% v(k+1) - s% v(k))*(tau_phot - tau00)/dtau
-               end if
-               L = s% L(k) + (s% L(k+1) - s% L(k))*(tau_phot - tau00)/dtau
-               k_phot = k
-               cs = s% csound(k_phot)
-               kap = s% opacity(k_phot)
-               return
-            end if
-            tau00 = taup1
-         end do
-         k_phot = s% nz
-         r = s% R_center
-         m = s% m_center
-         v = s% v_center
-         L = s% L_center
-         cs = s% csound(k_phot)
-         kap = s% opacity(k_phot)
-      end subroutine get_phot_info
