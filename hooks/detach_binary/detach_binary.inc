@@ -4,10 +4,9 @@ subroutine detach_binary(binary_id, ierr)
    ! because of the explosion of the companion and the disruption of
    ! the binary.
    use binary_lib, only: binary_set_separation_eccentricity
-   ! use utils_lib, only: mesa_error
    type (binary_info), pointer :: b
    integer, intent(in) :: binary_id
-   integer, intent(out) :: ierr
+   integer, intent(out) :: ierr ! ierr = 0 means success
    call binary_ptr(binary_id, b, ierr)
    if (ierr /= 0) return
 
@@ -21,11 +20,8 @@ subroutine detach_binary(binary_id, ierr)
       ! probably not what you want to do
       ierr = 1
       STOP 'Cannot detach a binary with point mass companion'
-      !
-      ! call mesa_error(&
-      !      __FILE__, &
-      !      __LINE__, &
-      !      'Cannot detach a binary with point mass companion')
+      ! you can remove this STOP statement, add a return, and check
+      ! for the value of ierr where you call this routine from instead
    end if
 
    b% job% evolve_both_stars = .false.
