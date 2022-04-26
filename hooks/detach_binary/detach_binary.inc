@@ -1,9 +1,10 @@
 subroutine detach_binary(binary_id, ierr)
-   ! This routine can be called in binary_extra_finish_step to continue
-   ! the evolution of the secondary as a single star, e.g. because of the explosion of the companion
-   ! and the disruption of the binary.
+   ! This routine can be called in binary_extra_finish_step to
+   ! continue the evolution of the secondary as a single star, e.g.
+   ! because of the explosion of the companion and the disruption of
+   ! the binary.
    use binary_lib, only: binary_set_separation_eccentricity
-   use utils_lib, only: mesa_error
+   ! use utils_lib, only: mesa_error
    type (binary_info), pointer :: b
    integer, intent(in) :: binary_id
    integer, intent(out) :: ierr
@@ -18,11 +19,13 @@ subroutine detach_binary(binary_id, ierr)
       ! detaching a binary with a point mass would imply
       ! evolving two detached point masses
       ! probably not what you want to do
+      ierr = 1
+      STOP 'Cannot detach a binary with point mass companion'
+      !
       ! call mesa_error(&
       !      __FILE__, &
       !      __LINE__, &
       !      'Cannot detach a binary with point mass companion')
-      STOP 'Cannot detach a binary with point mass companion'
    end if
 
    b% job% evolve_both_stars = .false.
