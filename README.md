@@ -18,6 +18,9 @@ publication(s) when using that procedure.
 
 ## Usage
 
+To use `contrib`, you must already be familiar with
+[extending MESA using `run_star_extras.f90`](https://docs.mesastar.org/en/latest/using_mesa/extending_mesa.html).
+
 The `contrib` repo can be used with any version of MESA after r12479
 by checking out this repo to some
 directory (e.g. `$HOME/mesa-contrib`) and pointing the environment
