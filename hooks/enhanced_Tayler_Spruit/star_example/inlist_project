@@ -25,11 +25,12 @@
 / ! end of kap namelist
 
 &controls
+      ! ----------------------- short run for testing
+      xa_central_lower_limit_species(1) = 'h1'
+      xa_central_lower_limit(1) = 1d-3
       !------------------------  MAIN
       initial_mass = 1.6
       initial_z = 0.02
-      use_Type2_opacities = .true.
-      Zbase = 2.d-2
       set_min_D_mix = .true.
       min_D_mix = 1d1
       mesh_delta_coeff = 0.7
@@ -47,13 +48,11 @@
       !---------------------  Rotation
       am_nu_ST_factor = 0
       use_other_am_mixing = .true.
-      am_time_average = .true.
       premix_omega = .true.
       recalc_mixing_info_each_substep = .true.
       am_nu_factor = 1
       am_nu_non_rotation_factor = 1d0
       am_nu_visc_factor = 0.333
-      angsml = 0.0
       !-------------------------  WIND
       cool_wind_RGB_scheme = 'Reimers'
       cool_wind_AGB_scheme = 'Blocker'
@@ -63,23 +62,11 @@
       use_accreted_material_j = .true.
       accreted_material_j = 0
       !-------------------  OVERSHOOTING
-      overshoot_f_above_nonburn_core = 0.015
-      overshoot_f0_above_nonburn_core = 0.005
-      overshoot_f_above_nonburn_shell = 0.015
-      overshoot_f0_above_nonburn_shell = 0.005
-      overshoot_f_below_nonburn_shell = 0.015
-      overshoot_f0_below_nonburn_shell = 0.005
-      overshoot_f_above_burn_h_core = 0.015
-      overshoot_f0_above_burn_h_core = 0.005
-      overshoot_f_above_burn_h_shell = 0.015
-      overshoot_f0_above_burn_h_shell = 0.005
-      overshoot_f_below_burn_h_shell = 0.015
-      overshoot_f0_below_burn_h_shell = 0.005
-      overshoot_f_above_burn_he_core = 0.015
-      overshoot_f0_above_burn_he_core = 0.005
-      overshoot_f_above_burn_he_shell = 0.015
-      overshoot_f0_above_burn_he_shell = 0.005
-      overshoot_f_below_burn_he_shell = 0.015
-      overshoot_f0_below_burn_he_shell = 0.005
+      overshoot_scheme(1) = 'exponential'
+      overshoot_zone_type(1) = 'any'
+      overshoot_zone_loc(1) = 'any'
+      overshoot_bdy_loc(1) = 'any'
+      overshoot_f(1) = 0.015
+      overshoot_f0(1) = 0.005
 
 / ! end of controls namelist

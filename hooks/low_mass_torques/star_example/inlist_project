@@ -16,11 +16,15 @@
     change_initial_net = .true. ! switch nuclear reaction network
     new_net_name = 'pp_and_cno_extras.net'
 
-    set_rate_c12ag = 'Kunz'
-    set_rate_n14pg = 'jina reaclib'
+    num_special_rate_factors = 1
+    reaction_for_special_factor(1) = 'r_c12_ag_o16'
+    special_rate_factor(1) = 1
+    filename_of_special_rate(1) = 'r_c12_ag_o16_kunz.txt'
 
-    ! change_lnPgas_flag = .true.
-    ! new_lnPgas_flag = .false.
+    num_special_rate_factors = 1
+    reaction_for_special_factor(1) = 'r_n14_pg_o15'
+    special_rate_factor(1) = 1
+    filename_of_special_rate(1) = 'r_n14_pg_o15_nacreII.dat'
 
     set_uniform_initial_composition = .true.
     initial_h1 =   0.711552
