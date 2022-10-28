@@ -54,6 +54,11 @@ cp "${MESA_CONTRIB_DIR}"/my-new-hook/star_example/src/* src/
 ./rn
 ```
 
+All example folders matching ``hooks/*/{star,binary,astero}_example/``
+will be run by the `check_examples.sh` script.  It helps to keep the
+example runtimes short (e.g., a few minutes long) so that
+`check_examples.sh` finishes in a reasonable time.
+
 ## How to add your code	to ``mesa-contrib``
 
 New contributions must be proposed through GitHub's *pull request*
@@ -70,7 +75,7 @@ of MESA and should therefore make your PR against the ``release``
 branch
 
 Once the PR is opened, the repo maintainers will review your code 
-and make a decision about whether to merge it into the repo, perhaps 
+and decide whether to merge it into the repo, perhaps 
 after some changes are made.
 
 ## Your responsibilities
