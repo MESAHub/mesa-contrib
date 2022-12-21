@@ -81,6 +81,10 @@
 
       max_years_for_timestep = 1d8
       mesh_delta_coeff = 0.5
+
+      ! stop when the center mass fraction of h1 drops below this limit
+      xa_central_lower_limit_species(1) = 'h1'
+      xa_central_lower_limit(1) = 1d-3
       
       ! atomic diffusion
       do_element_diffusion = .true. ! determines whether or not we do diffusion
@@ -106,66 +110,6 @@
       diffusion_class_typical_charge(2) = 2
       diffusion_class_typical_charge(3) = 8
       diffusion_class_typical_charge(4) = 21
-
-
-! FOR DEBUGGING
-
-      !report_hydro_solver_progress = .true. ! set true to see info about newton iterations
-      !report_ierr = .true. ! if true, produce terminal output when have some internal error
-      !hydro_show_correction_info = .true.
-
-      ! hydro debugging
-      !hydro_check_everything = .true.
-      !hydro_inspectB_flag = .true.
-      !hydro_sizequ_flag = .true.
-      
-      !hydro_get_a_numerical_partial = 1d-4
-      !hydro_test_partials_k = 736
-      !hydro_numerical_jacobian = .true.
-      !hydro_save_numjac_plot_data = .true.
-      !hydro_dump_call_number = 1535
-      !hydro_dump_iter_number = 6
-      !hydro_epsder_struct = 1d-6
-      !hydro_epsder_chem = 1d-6
-      !hydro_save_photo = .true. ! Saves a photo when hydro_call_number = hydro_dump_call_number -1
-
-      !fill_arrays_with_NaNs = .true.
-      !stop_for_NaNs = .true.
-      
-      !max_years_for_timestep = 3.67628942044319d-05
-
-      !report_why_dt_limits = .true.
-      !report_all_dt_limits = .true.
-      !report_hydro_dt_info = .true.
-      !report_dX_nuc_drop_dt_limits = .true.
-      !report_bad_negative_xa = .true.
-      
-      !show_mesh_changes = .true.
-      !mesh_dump_call_number = 5189
-      !okay_to_remesh = .false.
-      
-      !trace_evolve = .true.
-
-      !trace_newton_bcyclic_solve_input = .true. ! input is "B" j k iter B(j,k)
-      !trace_newton_bcyclic_solve_output = .true. ! output is "X" j k iter X(j,k)
-
-      !trace_newton_bcyclic_matrix_input = .true.
-      !trace_newton_bcyclic_matrix_output = .true.
-      
-      !trace_newton_bcyclic_steplo = 1 ! 1st model number to trace
-      !trace_newton_bcyclic_stephi = 1 ! last model number to trace
-      
-      !trace_newton_bcyclic_iterlo = 2 ! 1st newton iter to trace
-      !trace_newton_bcyclic_iterhi = 2 ! last newton iter to trace
-      
-      !trace_newton_bcyclic_nzlo = 1 ! 1st cell to trace
-      !trace_newton_bcyclic_nzhi = 10000 ! last cell to trace; if < 0, then use nz as nzhi
-      
-      !trace_newton_bcyclic_jlo = 1 ! 1st var to trace
-      !trace_newton_bcyclic_jhi = 100 ! last var to trace; if < 0, then use nvar as jhi
-      
-      !trace_k = 0
-
 
 / ! end of controls namelist
 
