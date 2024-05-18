@@ -1,15 +1,15 @@
-# ``Fuller et al. angular momentum transport``
+# Fuller et al. angular momentum transport
 
 ## Overview
 
 These functions implement the modified Tayler-Spruit dynamo by Fuller
 and collaborators.
 
-Specifically `TSF_fuller19` implements the algorithm described in
+Specifically `TSF_Fuller19` implements the algorithm described in
 [Fuller et al.
 2019](https://ui.adsabs.harvard.edu/abs/2019MNRAS.485.3661F/abstract)
 and available in the original form at
-https://zenodo.org/records/3228403, and `TSF_fuller_lu22` implements
+https://zenodo.org/records/3228403, and `TSF_Fuller_Lu22` implements
 the algorithm described in [Fuller & Lu
 2022](https://ui.adsabs.harvard.edu/abs/2022MNRAS.511.3951F/abstract)
 and available in the original form at
@@ -49,7 +49,7 @@ Then, these can be used as any `other` hook in MESA, that is:
 
 Example inlists and `run_star_extras.f90` (based on the
 `$MESA_DIR/star/work` template) are provided in `Fuller_AM_example`
-and by default will call the Fuller & Lu 2022 version. 
+and by default will call the Fuller & Lu 2022 version.
 
 It has been tested with MESA version r24.03.1.
 
