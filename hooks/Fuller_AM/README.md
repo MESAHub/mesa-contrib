@@ -2,8 +2,8 @@
 
 ## Overview
 
-These functions implement the modified Tayler-Spruit dynamo by Fuller
-and collaborators.
+The functions in `Fuller_AM_transport.inc` implement the modified
+Tayler-Spruit dynamo by Fuller and collaborators.
 
 Specifically `TSF_Fuller19` implements the algorithm described in
 [Fuller et al.
