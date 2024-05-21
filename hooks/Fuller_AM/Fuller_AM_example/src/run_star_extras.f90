@@ -65,14 +65,14 @@
          s% how_many_extra_profile_header_items => how_many_extra_profile_header_items
          s% data_for_extra_profile_header_items => data_for_extra_profile_header_items
 
-         !! for Fuller et al. 2019 AM transport
-         !! uncomment below
-         ! s% other_am_mixing => TSF_Fuller19
-
          !! for Fuller & Lu 2022 AM transport
-         !! uncomment below
          s% other_am_mixing => TSF_Fuller_Lu22
+         print *, "Using Fuller & Lu 2022 AM transport"
 
+         !! for Fuller et al. 2019 AM transport
+         !! comment above and uncomment below
+         ! s% other_am_mixing => TSF_Fuller19
+         ! print *, "Using Fuller et al. 2019 AM transport"
        end subroutine extras_controls
 
 

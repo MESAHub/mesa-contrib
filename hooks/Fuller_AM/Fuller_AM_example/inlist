@@ -1,44 +1,28 @@
-! This is the first inlist file that MESA reads when it starts.
-
-! This file tells MESA to go look elsewhere for its configuration
-! info. This makes changing between different inlists easier, by
-! allowing you to easily change the name of the file that gets read.
-
 &star_job
-
-    read_extra_star_job_inlist(1) = .true.
-    extra_star_job_inlist_name(1) = 'inlist_project'
-
-/ ! end of star_job namelist
+read_extra_star_job_inlist(1) = .true.
+extra_star_job_inlist_name(1) = 'inlist_FullerAM'
+/
 
 
 &eos
-
-    read_extra_eos_inlist(1) = .true.
-    extra_eos_inlist_name(1) = 'inlist_project'
-
-/ ! end of eos namelist
+read_extra_eos_inlist(1) = .true.
+extra_eos_inlist_name(1) = 'inlist_FullerAM'
+/
 
 
 &kap
-
-    read_extra_kap_inlist(1) = .true.
-    extra_kap_inlist_name(1) = 'inlist_project'
-
-/ ! end of kap namelist
+read_extra_kap_inlist(1) = .true.
+extra_kap_inlist_name(1) = 'inlist_FullerAM'
+/
 
 
 &controls
-
-    read_extra_controls_inlist(1) = .true.
-    extra_controls_inlist_name(1) = 'inlist_project'
-
-/ ! end of controls namelist
+read_extra_controls_inlist(1) = .true.
+extra_controls_inlist_name(1) = 'inlist_FullerAM'
+/
 
 
 &pgstar
-
-    read_extra_pgstar_inlist(1) = .true.
-    extra_pgstar_inlist_name(1) = 'inlist_pgstar'
-
-/ ! end of pgstar namelist
+read_extra_pgstar_inlist(1) = .true.
+extra_pgstar_inlist_name(1) = 'inlist_pgstar'
+/

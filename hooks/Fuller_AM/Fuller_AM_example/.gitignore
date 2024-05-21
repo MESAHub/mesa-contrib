@@ -1,0 +1,7 @@
+LOGS/*
+png/*
+photos/*
+*.data
+*.o
+*.smod
+*.mod
