@@ -1,0 +1,115 @@
+&star_job
+
+pgstar_flag = .true.
+
+initial_zfracs = 8
+
+/ ! end of star_job namelist
+
+
+&eos
+/ ! end of eos namelist
+
+
+&kap
+use_Type2_opacities = .true.
+Zbase = 0.02
+kap_file_prefix = 'OP_a09_nans_removed_by_hand'
+
+! ------------------------------------------------------
+! Recommended settings for publication quality
+! commented out to speed-up tests
+
+! cubic_interpolation_in_X = .true.
+! cubic_interpolation_in_Z = .true.
+! ------------------------------------------------------
+
+/ ! end of kap namelist
+
+
+&controls
+
+! when to stop
+max_model_number = 200
+
+initial_mass = 8.0 ! in Msun units
+initial_z = 0.02
+!initial_y = 0.276
+
+! Mixing
+min_D_mix = 100
+set_min_D_mix = .true.
+
+use_Ledoux_criterion = .false.
+MLT_option = 'Cox'
+mixing_length_alpha = 1.8d0
+
+do_conv_premix = .true.
+predictive_mix(1) = .false.
+predictive_zone_type(1) = 'any'
+predictive_zone_loc(1) = 'core'
+predictive_bdy_loc(1) = 'top'
+
+! Overshooting
+overshoot_scheme(1) = 'other' ! use dissipation balanced convective penetration
+overshoot_zone_type(1) = 'any'
+overshoot_zone_loc(1) = 'core'
+overshoot_bdy_loc(1) = 'top'
+
+! add some exponential overshooting on top
+overshoot_f0(1) = 0.005
+overshoot_f(1) = 0.01
+! overshoot_D0(1) = 0.005
+
+
+! Solver
+
+energy_eqn_option = 'dedt'
+
+! ------------------------------------------------------
+! Recommended settings for publication quality
+! commented out to speed-up tests
+
+! ! Atmosphere
+
+! atm_option = 'T_tau'
+! atm_T_tau_relation = 'Krishna_Swamy'
+! atm_T_tau_opacity = 'iterated'
+
+! ! Wind
+
+! hot_wind_scheme = 'Dutch'
+! cool_wind_RGB_scheme = 'Dutch'
+! cool_wind_AGB_scheme = 'Dutch'
+! Dutch_scaling_factor = 0.8d0
+
+! ! Solver
+! use_gold_tolerances = .false.
+
+! Resolution
+
+! max_allowed_nz = 100000
+! mesh_delta_coeff = 0.4
+! time_delta_coeff = 0.5
+
+! varcontrol_target = 1d-4
+! min_allowed_varcontrol_target = 1d-5
+
+! num_cells_for_smooth_gradL_composition_term = 10
+! threshold_for_smooth_gradL_composition_term = 0.02
+
+! num_cells_for_smooth_brunt_B = 10
+! threshold_for_smooth_brunt_B = 0.1
+
+! ! extra mesh controls
+! x_ctrl(1) = 0.1  ! xtra_dist_below
+! x_ctrl(2) = 0.1  ! xtra_dist_above_ov
+! x_ctrl(3) = 0.1  ! xtra_dist_above_bv
+! x_ctrl(4) = 0.15 ! xtra_coeff_mesh
+! ------------------------------------------------------
+
+/ ! end of controls namelist
+
+
+&pgstar
+/ ! end of pgstar namelist
