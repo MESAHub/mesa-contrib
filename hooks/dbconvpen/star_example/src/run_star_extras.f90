@@ -92,7 +92,7 @@
           integer :: ierr
           type (star_info), pointer :: s
           logical :: do_retry
-          integer k
+          integer :: k
           ierr = 0
           call star_ptr(id, s, ierr)
           if (ierr /= 0) return

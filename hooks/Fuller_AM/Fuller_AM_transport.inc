@@ -296,7 +296,7 @@ end function sige1
 
 
 real(dp) function sige2(T, rho, zbar, ierr, id)
-  ! writen by S.-C. YOON Oct. 10, 2003
+  ! written by S.-C. YOON Oct. 10, 2003
   ! electrical conductivity using conductive opacity
   ! see Wendell et al. 1987 ApJ 313:284
   use kap_lib, only: kap_get_elect_cond_opacity
@@ -315,7 +315,7 @@ real(dp) function sige2(T, rho, zbar, ierr, id)
 end function sige2
 
 real(dp) function sige3(z, t, xgamma)
-  ! writen by S.-C. YOON Oct. 10, 2003
+  ! written by S.-C. YOON Oct. 10, 2003
   ! electrical conductivity in degenerate matter,
   ! according to Nandkumar & Pethick (1984)
   real(dp), intent(in) :: z, t, xgamma
