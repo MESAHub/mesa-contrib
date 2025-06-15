@@ -229,7 +229,7 @@
         integer, intent(inout) :: ierr
         character(len=256) :: mesa_contrib_dir, hydro_Ttau_data
 
-        ist = 1 ! might be faster if this can be re-used
+        ist = 1 ! might be faster if this can be reused
         logtau_base_hydro_Ttau = -0.3d0 ! this is just a reasonable initial guess
         tau_base_hydro_Ttau = exp10(logtau_base_hydro_Ttau)
         lntau_base_hydro_Ttau = log(tau_base_hydro_Ttau)

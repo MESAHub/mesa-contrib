@@ -235,7 +235,7 @@
 
     ! Integrate over RZ until we find the edge of the PZ
     ! remainder of cell k (non-convective part)
-    ! Do integration explicitely, f*xi*4*pi*r^2 is moved outside of integral
+    ! Do integration explicitly, f*xi*4*pi*r^2 is moved outside of integral
     dr = s%r(k) - r_cb
     dLint = xi * f * 4d0 * pi * (pow3(s%r(k))-pow3(r_cb))/3 * Favg + (s%L(k)*0.5 * (s%grada_face(k) / s%gradr(k) - 1d0)) * dr
     Lint = dLint
@@ -249,7 +249,7 @@
        s% ixtra(1) = k
        return
     end if
-    ! Else calculate dL_int for each cell, untill the total integrated L > RHS
+    ! Else calculate dL_int for each cell, until the total integrated L > RHS
     do j=k-1,1,-1
        dr = s%r(j) - s%r(j+1)
        dLint = xi * f * 4d0 * pi * (pow3(s%r(j))-pow3(s%r(j+1)))/3 * Favg &
