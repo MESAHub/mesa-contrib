@@ -19,6 +19,14 @@ your `run_star_extras.f90` includes this file, e.g.:
     contains
        include 'dbconvpen/dbconvpen.inc'
 ```
+
+and in `extras_controls` point to the relevant routine defined in
+`dpconvpen/dbconvpen.inc`:
+
+``` Fortran90
+   s% other_overshooting_scheme => extended_convective_penetration
+```
+
 Then make sure to set the following in your inlist:
 
 ``` Fortran90
